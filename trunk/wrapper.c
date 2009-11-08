@@ -14,7 +14,23 @@ Write(int fd, void *ptr, size_t nbytes) {
 			err_sys("EPIPE: chiusura anomala\n");
 	}
 	if( n < 0){
-		err_sys("write error");
+		printf("cameriere disperso\n");
+	}
+	return(n);
+}
+
+ssize_t
+Write2(int fd, void *ptr, size_t nbytes) {
+	ssize_t n;
+  	n=write(fd, ptr, nbytes);
+	if ( n == 0) {
+		if(errno==EINTR)
+			err_sys("EINTR: write error\n");
+		if(errno==EPIPE)
+			err_sys("EPIPE: chiusura anomala\n");
+	}
+	if( n < 0){
+		printf("cameriere disperso\n");
 	}
 	return(n);
 }
@@ -36,9 +52,6 @@ ssize_t
 Read2(int fd, void *vptr, size_t maxlen) {
 	ssize_t		n;
 	n = read(fd, vptr, maxlen);
-	if (n == 0) {
-			err_sys("EOF sul socket");
-	}
 	if (n < 0) {
 			err_sys("read error");
 	}

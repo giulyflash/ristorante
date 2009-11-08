@@ -1,5 +1,5 @@
 
-CC = gcc
+CC = gcc -lpthread
 
 PROGS = error.o my_io.o my_signal.o wrapper.o esame.o cucina cameriere
 
