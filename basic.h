@@ -6,7 +6,7 @@
 #define	__basic_h
 
 /* include dei principali  header file di sistema */
-
+#include <sys/shm.h>
 #include	<sys/types.h>	/* tipi di dati di sistema */
 #include	<sys/socket.h>	/* dichiarazioni funzioni base su socket */
 #include	<sys/time.h>	/* timeval{} per la select() */
@@ -29,6 +29,7 @@
 #include        <poll.h>        /* definizione di poll() */
 #include        <strings.h>     /* funzioni non ANSI C su stringhe */
 #include        <sys/ioctl.h>   /* usato per ioctl */
+#include <sys/shm.h>
 
 
 /* ------------------------------------------------------------------------- */
