@@ -6,7 +6,7 @@
 #define	__basic_h
 
 /* include dei principali  header file di sistema */
-#include <sys/shm.h>
+#include    <sys/shm.h>
 #include	<sys/types.h>	/* tipi di dati di sistema */
 #include	<sys/socket.h>	/* dichiarazioni funzioni base su socket */
 #include	<sys/time.h>	/* timeval{} per la select() */
@@ -25,12 +25,12 @@
 #include	<unistd.h>	/* usato da sysconf */
 #include	<sys/wait.h>	/* usato da wait() */
 #include	<sys/un.h>	/* utilizzato per socket Unix domain */
-#include        <sys/select.h>  /* definizione di select() */
-#include        <poll.h>        /* definizione di poll() */
-#include        <strings.h>     /* funzioni non ANSI C su stringhe */
-#include        <sys/ioctl.h>   /* usato per ioctl */
-#include <sys/shm.h>
-
+#include    <sys/select.h>  /* definizione di select() */
+#include    <poll.h>        /* definizione di poll() */
+#include    <strings.h>     /* funzioni non ANSI C su stringhe */
+#include    <sys/ioctl.h>   /* usato per ioctl */
+#include 	<sys/shm.h>
+#include 	<ctype.h>
 
 /* ------------------------------------------------------------------------- */
 
@@ -117,8 +117,9 @@ Fork(void);
 void
 Close(int fd);
 
-//typedef void (*sighandler_t)(int);
+
 /*
+typedef void (*sighandler_t)(int);
 sighandler_t
 Signal(int signum, sighandler_t handler);
 */

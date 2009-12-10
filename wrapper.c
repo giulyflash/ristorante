@@ -14,7 +14,8 @@ Write(int fd, void *ptr, size_t nbytes) {
 			err_sys("EPIPE: chiusura anomala\n");
 	}
 	if( n < 0){
-		printf("cameriere disperso\n");
+		perror("cameriere disperso\n");
+	//	printf("cameriere disperso\n");
 	}
 	return(n);
 }
@@ -158,14 +159,3 @@ Close2(int fd) {
 			err_sys("close error");
 	}
 }
-
-sighandler_t
-Signal(int signum, sighandler_t handler) {
-	sighandler_t n;
-	n = signal(signum, handler);
-	if( n == SIG_ERR) {
-		err_sys("signal SIGPIPE failed: ");
-	}
-	return(n);
-}
-

@@ -57,79 +57,63 @@ void my_send(int protocollo, pacchetto p) {
 	Write(sockfd,send,sizeof(send));
 }
 
-/*
-void prepara_piatti2(int connsd, pacchetto p) {
-        char numPiatto[MAXLINE];
-        int qt,tempo, piatto;
-        int i=0;
-        pid_t pid;
-        double tempo_medio = 0;
-        char send[sizeof(pacchetto)];
-        struct timeval          starttime,endtime;
-        double  tempo_di_servizio = 0, tempo_totale = 0;
-        if((pid=fork()) == 0) {
-//              sleep(20);
-                if ( gettimeofday(&starttime, NULL) < 0 )
-                        err_sys("gettime error");
-                printf("\n *** Il cuoco [un processo figlio con pid %d] comincia a preparare il piatto ***\n", getpid());
-                printf("%d\n", *l_piatti[i+1]);
-                while(l_piatti[i]!= '\0') {
-                        switch(*l_piatti[i]) {
-                        case 1:
-                                piatto = 1;
-                                printf("\nsto preparando il piatto %d\n", *l_piatti[i]);
-                                break;
-                        case 2:
-                                piatto = 2;
-                                printf("\nsto preparando il piatto %d\n", *l_piatti[i]);
-                                break;
-                        case 3:
-                                piatto = 3;
-                                printf("\nsto preparando il piatto %d\n", *l_piatti[i]);                                break;
-                        case 4:
-                                piatto = 4;
-                                printf("\nsto preparando il piatto %d\n", *l_piatti[i]);                                break;
-                        case 5:
-                                piatto = 5;
-                                printf("\nsto preparando il piatto %d\n", *l_piatti[i]);                                break;
-                        case 6:
-                                piatto = 6;
-                                printf("\nsto preparando il piatto %d\n", *l_piatti[i]);                                break;
-                        case 7:
-                                piatto = 7;
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", temporaneo->ordine[i], temporaneo->tavolo);
-                                break;
-                        case 8:
-                                piatto = 8;
-                                printf("sto preparando\nsto preparando il piatto %d per il tavolo %d\n", temporaneo->ordine[i], temporaneo->tavolo);
-                                break;
-                        case 9:
-                                piatto = 9;
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", temporaneo->ordine[i], temporaneo->tavolo);
-                                break;
-                        }
-                        memset(numPiatto,'\0',sizeof(numPiatto));
-                        qt = 1;
-                        tempo = qt*piatto;
-                        sleep(tempo);
-                        if ( gettimeofday(&endtime,NULL) < 0 )
-                                err_sys("gettime error");
-                        tempo_totale += (tempo_di_servizio = (endtime.tv_sec+(endtime.tv_usec/1000000.0)) - (starttime.tv_sec+(starttime.tv_usec/1000000.0)));
-                        printf("\nIl tempo di preparazione del piatto e' di %fl secondi\n",tempo_di_servizio);
-                        snprintf(numPiatto, sizeof(numPiatto),"%d", temporaneo->ordine[i]);
-                        p.protocollo = 7;
-                        strcpy(p.messaggio,numPiatto);
-                        memcpy(send,&p,sizeof(pacchetto));
-                        Write(connsd,send,sizeof(send));
-                        printf("\ne' pronto il piatto %d\n", *l_piatti[i]);                     i+=2;
-                }
-                tempo_medio += tempo_totale;
-                *medio += tempo_totale;
-                printf("\n *** Il tempo di evasione dell' ordine e' di %f secondi ***\n",tempo_totale);
-                printf("\n *** Il tempo medio di evasione degli ordini e' di %f secondi ***\n",(*medio / numero_ordine));
-                printf("\n *** processo con pid [%d] terminato ***\n", getpid());
-                exit(1);
-        }
-//      head = cancella_pacchetto(*temporaneo,connsd);
+void coda_tavoli(pacchetto p) {
+	int i=0;
+	printf("\t---\tin attesa dei piatti\t---\n");
+    while(p.ordine[i]!= '\0') {
+            printf("\n\til tavolo %d attende i piatti. . .\n",p.ordine[i]);
+            i++;
+    }
+    printf("\n\t---\tfine lista\t\t---\n");
+    menu_cameriere();
 }
-*/
+
+
+
+void init_dispensa() {
+	int shmid4;
+    if((shmid4 = (shmget(IPC_PRIVATE, sizeof(dispensa), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+    d = (dispensa *) shmat(shmid4, 0, 0);
+    d->piatto_1[0] = 20;
+    d->piatto_1[1] = 7;
+
+    d->piatto_2[0] = 20;
+    d->piatto_2[1] = 20;
+
+    d->piatto_3[0] = 20;
+    d->piatto_3[1] = 18;
+
+    d->piatto_4[0] = 20;
+    d->piatto_4[1] = 15;
+
+    d->piatto_5[0] = 20;
+    d->piatto_5[1] = 35;
+
+    d->piatto_6[0] = 20;
+    d->piatto_6[1] = 25;
+
+    d->piatto_7[0] = 20;
+    d->piatto_7[1] = 50;
+
+    d->piatto_8[0] = 20;
+    d->piatto_8[1] = 5;
+
+    d->piatto_9[0] = 20;
+    d->piatto_9[1] = 8;
+}
+
+void menu_cameriere() {
+		printf("\n\t\t\033[34m *** SeS Restaurant ***\033[0m\n");
+        printf("\t\n\033[34m *** Applicazione di rete per la Ristorazione ***\033[0m\n\n");
+        printf("\t1. nuovo ordine\n");
+        printf("\t2. modifica ordine\n");
+        printf("\t3. invia sollecito\n");
+        printf("\t4. visualizza piatti pronti\n");
+        printf("\t5. servi piatto\n");
+        printf("\t6. richiedi conto\n");
+        printf("\t7. esci\n");
+        printf("\ncosa desideri fare:\n");
+}
+

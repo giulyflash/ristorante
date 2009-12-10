@@ -1,11 +1,31 @@
 #include "basic.h"
 #include "esame.h"
 
+int numero_ordine=0, camerieri, max, *sollecito, *incasso, *client/*[FD_SETSIZE]*/, k=0,listensd;
+double  *tempo_medio, *tempo_di_servizio, *tempo_totale, tempo_tot,info[255];
 
-int numero_ordine=0, camerieri, max, *sollecito, *incasso, client[FD_SETSIZE];
-double  *tempo_medio, *tempo_di_servizio, *tempo_totale, *medio;
-pacchetto *temporaneo;
-dispensa *d;
+pacchetto *lista_camerieri[4];
+int shmid_t;
+int *piatti_pronti;
+
+void handler(int signum) {
+	int pid,status;
+	printf("signum=%d\n",signum);
+	switch (signum) {
+		case SIGCHLD:
+			while((pid=waitpid(-1,&status,WNOHANG))>0) {
+				printf("Processo [%d] terminato.\n",pid);
+				if (WIFSIGNALED(status)) {
+					printf("Errore. Processo [%d] e' terminato a causa del segnale %d.\n",pid,WTERMSIG(status));
+				}
+			}
+		break;
+		case SIGINT:
+			printf("rilevato segnale SIGINT\n");
+		break;
+
+	}
+}
 
 void inserisci_pacchetto(pacchetto *p){
         if (head == NULL) {
@@ -37,345 +57,357 @@ void stampa_lista(pacchetto *p) {
         printf("\t*** fine lista ***\n");
 }
 
-pacchetto stampa_lista2(pacchetto *p) {
-        pacchetto tmp;
-    char send[sizeof(pacchetto)];
-
-        int i,j;
-        printf("\n\t*** lista ordini ***\n");
-        j=0;
-        while(p != NULL) {
-            printf("--------------------------------\n");
-                printf("tavolo %d in attesa di essere servito\n", p->tavolo);
-                i = 0;
-                tmp.ordine[j] = p->tavolo;
-                j++;
-                printf("--------------------------------\n");
-                p = p->next;
-        }
-        tmp.ordine[j] = '\0';
-        tmp.protocollo = 5;
-        memcpy(send,&tmp,sizeof(pacchetto));
-        Write(connsd,send,sizeof(send));
-        return tmp;
-}
-
-int stampa_lista3(pacchetto *p, int cameriere) {
-        pacchetto tmp;
-    char send[sizeof(pacchetto)];
-
-        int i,j, ritorno=0;
-        printf("\n\ti piatti sono pronti. . .\n");
-        j=0;
-        while(p != NULL) {
-        	if(p->nome_cameriere == cameriere) {
-				ritorno++;
-        	}
-                p = p->next;
-        }
-        tmp.protocollo = 12;
-        memcpy(send,&tmp,sizeof(pacchetto));
-        Write2(client[cameriere],send,sizeof(send));
-        if(ritorno!=0)
-        	return 1;
-        else
-        	return 0;
-}
-void passa_ordine(pacchetto *p, int old, int new) {
-    while(p != NULL) {
-    	if(p->nome_cameriere == old) {
-    		printf("la cucina passa l'ordine dal cameriere %d al cameriere %d\n", p->nome_cameriere, new);
-    		p->nome_cameriere=new;
-    	}
-    	p = p->next;
-    }
-}
-void *tbody1(void *arg){
-    pacchetto tmp;
-    char send[sizeof(pacchetto)];
-	int i=3, notifica=0;
-	pthread_t t1;
-	while(i!=0) {
-		sleep(60);
-		notifica += stampa_lista3(head,(int)arg);
-		i--;
-	}
-	if(notifica<3) {
-        tmp.protocollo = 13;
-        memcpy(send,&tmp,sizeof(pacchetto));
-        Write2(client[(int)arg],send,sizeof(send));
-		printf("OTTIMO LAVORO!!\n");
-
-	}
-	else {
-        tmp.protocollo = 14;
-        memcpy(send,&tmp,sizeof(pacchetto));
-        Write2(client[(int)arg],send,sizeof(send));
-		printf("cameriere non ci siamo\n");
-		max++;
-		if(max<2) {
-		passa_ordine(head,(int)arg,(int)arg+1);
-		pthread_create(&t1, NULL, tbody1, (arg+1));
-		} else {
-			passa_ordine(head,(int)arg,1);
-			pthread_create(&t1, NULL, tbody1, 1);
-			max = 0;
+void lista_piatti_attesa(pacchetto p) {
+	int i=0;
+	while(i!=10) {
+		if(piatti_pronti[i]!=0) {
+			printf("tavolo %d piatto %d pronto\n", p.tavolo, piatti_pronti[i]);
 		}
-
+		i++;
 	}
-        pthread_exit(NULL);
 }
 
+void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
+	int j=3, cont=0;
+	pacchetto tmp, *tmp2;
+	char send[sizeof(pacchetto)];
+	tmp2 = &p;
+	p.pronti=i;
+	while(j!=0) {
+		if(piatti_pronti[p.nome_cameriere]!=0) {
+			tmp.protocollo = 12;
+			tmp.pronti=i;
+			tmp.tavolo=p.tavolo;
+			memcpy(send, &tmp, sizeof(pacchetto));
+			Write(client[cameriere], send, sizeof(send));
+			printf("\n\t dentro la servi_piatto lanciata all'interno di una fork() connsd = %d\n\n",client[cameriere]);
+			printf("cameriere %d devi servire il piatto %d al tavolo %d\n", cameriere, i, p.tavolo);
+			cont++;
+			sleep(5);
+		}
+		j--;
+	}
+	if(piatti_pronti[p.nome_cameriere]==0) {
+		printf("piatto servito\n");
+	}
+	if(lista_camerieri[cameriere]->ttl==2) {
+		printf("piatto non servito\n");
+	} else {
+	if(cont>2) {
+		printf("Il cameriere non ha servito i piatti nel tempo prestabilito [inviate 3 notifiche], passo l'ordine a un altro cameriere\n");
+		if(cameriere<2) {
+			lista_camerieri[cameriere+1] = lista_camerieri[cameriere];
+			cameriere = cameriere+1;
+			servi_piatto(*tmp2, cameriere, i,tot);
+
+		} else {
+			cameriere=1;
+			servi_piatto(*tmp2,cameriere,i,tot);
+		}
+	} else {
+		printf("ottimo lavoro\n");
+		*incasso += tot;
+		lista_camerieri[cameriere]->conto+=tot;
+		tmp.protocollo = 13;
+		memcpy(send, &tmp, sizeof(pacchetto));
+		Write(client[cameriere], send, sizeof(send));
+	}
+	}
+}
 
 
 void prepara_piatti(pacchetto p) {
-        char numPiatto[MAXLINE];
-
-        int qt, piatto, error;
-        double tempo;
-        int i=0, tot=0, j;
-        pid_t pid;
-        char send[sizeof(pacchetto)];
-        struct timeval          starttime,endtime;
-
-        if((pid=fork()) == 0) {
-              sleep(15);
-                if ( gettimeofday(&starttime, NULL) < 0 )
-                        err_sys("gettime error");
-                printf("\n *** Il cuoco [un processo figlio con pid %d] comincia a preparare il piatto ***\n", getpid());
-                j=0;
-                while((p.ordine[i]!= '\0') && (p.servito != 1)){
-                        error = 0;
-                        j++;
-                        switch(p.ordine[i]) {
-                        case 1:
-                                piatto = 1;
-                                tot += d->piatto_1[1];
-                                printf("il piatto costa %d euro\n", d->piatto_1[1]);
-                                if((d->piatto_1[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_1[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_1[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 2:
-                                piatto = 2;
-                                if((d->piatto_2[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_2[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_2[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 3:
-                                piatto = 3;
-                                if((d->piatto_3[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_3[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_3[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 4:
-                                piatto = 4;
-                                if((d->piatto_4[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_4[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_4[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 5:
-                                piatto = 5;
-                                if((d->piatto_5[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_5[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_5[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 6:
-                                piatto = 6;
-                                if((d->piatto_6[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_6[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_6[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 7:
-                                piatto = 7;
-                                if((d->piatto_7[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_7[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_7[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 8:
-                                piatto = 8;
-                                if((d->piatto_8[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_8[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_8[0];
-                                        error = 1;
-                                }
-                                break;
-                        case 9:
-                                piatto = 9;
-                                if((d->piatto_9[0] -= p.ordine[i+1]) > 0) {
-                                printf("\nsto preparando il piatto %d per il tavolo %d\n", p.ordine[i], p.tavolo);
-                                printf("In dispensa sono presenti %d porzioni del piatto %d\n", d->piatto_1[0], p.ordine[i]);
-                                } else {
-                                        printf("ingredienti esauriti\n");
-                                        d->piatto_9[0] += p.ordine[i+1];
-                                        incasso -= d->piatto_9[0];
-                                        error = 1;
-                                }
-                                break;
-                        }
-                        if(error != 1) {
-                        	printf("sollecito %d\n", *sollecito);
-        					qt = p.ordine[i+1];
-        					tempo = ((qt*piatto)/(*sollecito));
-        					printf("%f\n", tempo);
-        					sleep(tempo);
-							tot = tot * qt;
-							*incasso += tot;
-
-							if ( gettimeofday(&endtime,NULL) < 0 )
-									err_sys("gettime error");
-							*tempo_di_servizio = (endtime.tv_sec+(endtime.tv_usec/1000000.0)) - (starttime.tv_sec+(starttime.tv_usec/1000000.0));
-
-							snprintf(numPiatto, sizeof(numPiatto),"%d", p.ordine[i]);
-							p.protocollo = 7;
-							strcpy(p.messaggio,numPiatto);
-							memcpy(send,&p,sizeof(pacchetto));
-							Write(connsd,send,sizeof(send));
-							printf("\n *** sto preparando il piatto %d per il tavolo %d ***\n",p.ordine[i], p.tavolo);
-							i+=2;
-                        } else {
-                            p.protocollo = 9;
-                      //      d->piatto_1[0] += p.ordine[i+1];
-                      //      incasso -= d->piatto_1[0];
-                            strcpy(p.messaggio,numPiatto);
-                            memcpy(send,&p,sizeof(pacchetto));
-                            Write(connsd,send,sizeof(send));
-                            i+=2;
-                        }
-
-                }
-                *tempo_totale += *tempo_di_servizio;
-				printf("\n *** Il tempo di preparazione di questo ordine e' di %fl secondi *** \n",*tempo_di_servizio);
-				printf(" *** Il tempo totale di preparazione dei piatti e' di %f secondi ***\n",*tempo_totale);
-				printf(" *** Il tempo medio di preparazione dei piatti e' di %f secondi ***\n",(*tempo_totale / numero_ordine));
-				printf(" *** il cuoco [%d] ha terminato ***\n", getpid());
-				printf(" *** il conto e' di %d euro *** \n", tot);
-                exit(1);
+	int time=0;
+	int i = 0, tot = 0;
+	pid_t pid;
+	int shmid[10];
+	char send[sizeof(pacchetto)];
+    if(p.modificato==0) {
+        if((shmid[p.tavolo] = (shmget(IPC_PRIVATE, sizeof(pacchetto), 0600))) < 0) {
+                err_sys("errore nell shmget");
         }
-        pthread_t t1;
+        lista_camerieri[p.nome_cameriere] = (pacchetto *) shmat(shmid[p.tavolo], 0, 0);
+        *lista_camerieri[p.nome_cameriere] = p;
+    }
+    *lista_camerieri[p.nome_cameriere] = p;
 
-        printf("\nordine in lavorazione. . .\n");
-        pthread_create(&t1, NULL, tbody1, p.nome_cameriere);
+    if(p.modificato==0) {
+    	if ((pid = fork()) == 0) {
+    		Close(listensd);
+    		/*
+    		Signal(SIGCHLD, handler);
+    		Signal(SIGINT, handler);
+    		Signal(SIGPIPE, SIG_IGN);
+    		sleep(15);
+    		*/
+    		//sleep(15);
+    		Signal(SIGPIPE, SIG_IGN);
+			while(lista_camerieri[p.nome_cameriere]->ordine[i] != '\0') {
+					switch (lista_camerieri[p.nome_cameriere]->ordine[i]) {
+						case 1:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_1[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_1[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_1[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
 
+						case 2:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_2[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_2[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot = d->piatto_2[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_2[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_2[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
 
+						case 3:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_3[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_3[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_3[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+						case 4:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_4[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_4[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_4[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+
+						case 5:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_5[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_5[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_5[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+
+						case 6:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_6[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_6[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_6[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+
+						case 7:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_7[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_7[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_7[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+
+						case 8:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_8[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_8[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_8[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+						case 9:
+							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
+								if ((d->piatto_9[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
+									lista_camerieri[p.nome_cameriere]->error=0;
+									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_9[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
+									tot += d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									time+=lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1];
+								} else {
+									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
+									p.protocollo=20;
+									p.ordine[i]=0;
+									memcpy(send, &p, sizeof(pacchetto));
+									Write(client[p.nome_cameriere], send, sizeof(send));
+									printf("gli ingredienti per il piatto %d sono esauriti\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
+									d->piatto_9[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot -= d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									lista_camerieri[p.nome_cameriere]->error = 1;
+								}
+							} else
+								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+						break;
+
+					}
+
+					if(lista_camerieri[p.nome_cameriere]->error!=1) {
+						time = ((lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1]));
+						printf("cucino il piatto in %d secondi. . .\n",(time)/lista_camerieri[p.nome_cameriere]->sollecito);
+						time=time/lista_camerieri[p.nome_cameriere]->sollecito;
+						sleep(time);
+						printf("piatto pronto, comincio a notificarlo al cameriere\n");
+						piatti_pronti[p.nome_cameriere]=1;
+						servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
+					}
+					i+=2;
+				}
+    exit(1);
+    }
+    }
 
 }
 
-void leggi_ordine2(pacchetto p, int i) {
-        char send[sizeof(pacchetto)];
-        pacchetto *tmp = newPacchetto();
-        memset(send,'\0',sizeof(pacchetto));
-        memset(tmp,'\0',sizeof(tmp));
-        p.nome_cameriere = i;
-        memcpy(tmp,&p,sizeof(p));
-        int trovato = 0;
-        tmp = head;
-        while((tmp != NULL) && (trovato == 0)) {
-                if(tmp->tavolo == p.tavolo) {
-                        memcpy(&p,tmp,sizeof(pacchetto));
-                        trovato = 1;
-                        head = cancella_pacchetto(p);
-                }
-                tmp = tmp->next;
-        }
-
-        if(trovato == 1) {
-                tmp->protocollo = 5;
-            memcpy(send,&tmp,sizeof(pacchetto));
-            Write(connsd,send,sizeof(send));
-        } else {
-        numero_ordine++;
-        stampa_lista(head);
-        prepara_piatti(p);
-        }
-}
 
 void leggi_ordine(pacchetto p, int i) {
-        int trovato = 0;
-        char send[sizeof(pacchetto)];
-        pacchetto *tmp = newPacchetto();
-        pacchetto *tmp2;
-        memset(send,'\0',sizeof(pacchetto));
-        memset(tmp,'\0',sizeof(tmp));
-        p.nome_cameriere = i;
-        memcpy(tmp,&p,sizeof(p));
+	int trovato = 0;
+	char send[sizeof(pacchetto)];
+	pacchetto *tmp = newPacchetto();
+	pacchetto *tmp2;
+	memset(send, '\0', sizeof(pacchetto));
+	memset(tmp, '\0', sizeof(tmp));
+	p.nome_cameriere = i;
+	memcpy(tmp, &p, sizeof(p));
 
-    tmp2 = head;
-    while((tmp2 != NULL) && (trovato == 0)) {
-            if(tmp2->tavolo == p.tavolo) {
-                    memcpy(&p,tmp2,sizeof(pacchetto));
-                    trovato = 1;
-            }
-            tmp2 = tmp2->next;
-    }
-    if((trovato == 1) && (p.pr ==1)) {
-    	head = cancella_pacchetto(p);
-        printf(" *** da inserire ***\n");
-        numero_ordine++;
-        inserisci_pacchetto(tmp);
-        stampa_lista(head);
-        prepara_piatti(p);
-    }
-    if((trovato == 1)){
-            p.protocollo = 8;
-            printf("gia inserito\n");
-            memcpy(send,&p,sizeof(pacchetto));
-            Write(connsd,send,sizeof(send));
-    } else {
-        printf("da inserire\n");
-        numero_ordine++;
-        inserisci_pacchetto(tmp);
-        stampa_lista(head);
-        prepara_piatti(p);
-    }
+	tmp2 = head;
 
+	if ((p.modificato == 3)) {
+		prepara_piatti(p);
+		printf("si\n");
+	} else {
 
+	while ((tmp2 != NULL) && (trovato == 0)) {
+		if ((tmp2->tavolo == p.tavolo)&& (p.modificato!=1)) {
+			memcpy(&p, tmp2, sizeof(pacchetto));
+			trovato = 1;
+		}
+		tmp2 = tmp2->next;
+	}
+
+	if ((trovato == 1)) {
+		p.protocollo = 8;
+		printf("ordine scartato [gia memorizzato un ordine con quell'id tavolo]\n");
+		memcpy(send, &p, sizeof(pacchetto));
+		Write(connsd, send, sizeof(send));
+	} else {
+		printf("ordine inserito in lista [ordine nuovo, o modificato]\n");
+		numero_ordine++;
+		inserisci_pacchetto(tmp);
+		stampa_lista(head);
+		prepara_piatti(p);
+	}
+
+	}
 }
 
 pacchetto *cancella_pacchetto(pacchetto p) {
@@ -435,6 +467,7 @@ void modifica_ordine(pacchetto p) {
         }
         if(trovato == 1) {
                 p.protocollo = 6;
+                numero_ordine--;
         } else {
                 p.protocollo = 3;
         }
@@ -444,112 +477,80 @@ void modifica_ordine(pacchetto p) {
         Write(connsd,send,sizeof(send));
         }
         head = cancella_pacchetto(p);
-
 }
 
 void evadi_ordine(pacchetto p) {
+	printf("sono arrivato\n");
+	piatti_pronti[p.nome_cameriere]='\0';
+	printf("ho messo lo zero\n");
+}
+void stampa_statistiche() {
 
-        char send[sizeof(pacchetto)];
-        pacchetto *tmp;
-        int trovato = 0;
-        if (head == NULL) {
-//                printf ("errore: lista vuota\n");
-                p.protocollo = 10;
-                memset(send,'\0',sizeof(pacchetto));
-                memcpy(send,&p,sizeof(pacchetto));
-                Write(connsd,send,sizeof(send));
-        }
-        else    {
-        tmp = head;
-        while((tmp != NULL) && (trovato == 0)) {
-                if(tmp->tavolo == p.tavolo) {
-                        memcpy(&p,tmp,sizeof(pacchetto));
-                        trovato = 1;
-                        tmp->servito = 1;
-                }
-                tmp = tmp->next;
-        }
-        if(trovato == 1) {
-                p.protocollo = 4;
-        } else {
-                p.protocollo = 3;
-        }
-        memset(send,'\0',sizeof(pacchetto));
-        memcpy(send,&p,sizeof(pacchetto));
-        printf(" *** Tavolo %d servito ***\n", p.tavolo);
-        head = cancella_pacchetto(p);
-
-        printf(" *** Fino a ora il ristorante ha incassato %d euro ***\n", *incasso);
-        Write(connsd,send,sizeof(send));
-        }
-
+	int j=0;
+	printf("\n\n\t\t *** STATISTICHE ***\n\n");
+	while(info[j]!=0) {
+		printf(" *** il tavolo %d e' stato servito in %fl secondi ***\n", (int)info[j], info[j+1]);
+		j+=2;
+	}
+	printf(" *** il tempo totale di evasione degli ordini e' %fl ***\n",tempo_tot);
+	printf(" *** il tempo medio di evasione degli ordini e' %fl ***\n",(tempo_tot / numero_ordine));
+	printf(" *** Il ristorante ha incassato %d euro ***\n", *incasso);
 }
 
-/*
+void memorizza_info(pacchetto p) {
+	tempo_tot+=p.tempi[0];
+	info[k] = p.tavolo;
+	info[k+1] = p.tempi[0];
+	k+=2;
+}
 
-void *tbody2(pacchetto p){
-
-int trovato=0;
-char send[sizeof(pacchetto)];
+void gestisci_sollecito(pacchetto p) {
 	pacchetto *tmp;
-    if (head == NULL) {
-    	p.protocollo = 10;
-            memset(send,'\0',sizeof(pacchetto));
-            memcpy(send,&p,sizeof(pacchetto));
-            Write(connsd,send,sizeof(send));
-    }
-    else    {
-    while((head != NULL) && (trovato == 0)) {
-            if(head->tavolo == p.tavolo) {
-                    trovato = 1;
-                    head->sollecito++;
-            }
-            head = head->next;
-    }
-    }
-	pthread_exit(NULL);
+	int trovato=0;
+	tmp = head;
+
+	while ((tmp != NULL) && (trovato == 0)) {
+		if (tmp->tavolo == p.tavolo) {
+			memcpy(&p, tmp, sizeof(pacchetto));
+			trovato = 1;
+			printf("CUCINA SBRIGATI!!\n");
+			*lista_camerieri[p.nome_cameriere] = *tmp;
+			lista_camerieri[p.nome_cameriere]->sollecito+=1;
+		}
+		tmp = tmp->next;
+	}
+	if(trovato!=1) {
+		printf("tavolo non presente in lista\n");
+	}
 }
 
-
-void sollecita_ordine(pacchetto p) {
-    char send[sizeof(pacchetto)];
-    pacchetto *tmp;
-    int trovato = 0;
-    if (head == NULL) {
-            p.protocollo = 10;
-            memset(send,'\0',sizeof(pacchetto));
-            memcpy(send,&p,sizeof(pacchetto));
-            Write(connsd,send,sizeof(send));
-    }
-    else    {
-    tmp = head;
-    while((tmp != NULL) && (trovato == 0)) {
-            if(tmp->tavolo == p.tavolo) {
-                    memcpy(&p,tmp,sizeof(pacchetto));
-                    trovato = 1;
-            }
-            tmp = tmp->next;
-    }
-    if(trovato == 1) {
-            p.protocollo = 11;
-    } else {
-            p.protocollo = 3;
-    }
-
-    memset(send,'\0',sizeof(pacchetto));
-    memcpy(send,&p,sizeof(pacchetto));
-    Write(connsd,send,sizeof(send));
-    }
-    head = cancella_pacchetto(p);
-
+void invia_conto(pacchetto p) {
+	char send[sizeof(pacchetto)];
+	pacchetto tmp, *tmp2;
+	int trovato=0;
+	tmp2=head;
+	while ((tmp2 != NULL) && (trovato == 0)) {
+		if (tmp2->tavolo == p.tavolo) {
+			memcpy(&p, tmp2, sizeof(pacchetto));
+			trovato = 1;
+		}
+		tmp2 = tmp2->next;
+	}
+	if(trovato==1) {
+		printf("il conto e' di %d euro\n", lista_camerieri[p.nome_cameriere]->conto);
+		head = cancella_pacchetto(p);
+		tmp.protocollo=15;
+		tmp.conto = lista_camerieri[p.nome_cameriere]->conto;
+		memcpy(send, &tmp, sizeof(pacchetto));
+		Write(client[p.nome_cameriere], send, sizeof(send));
+		lista_camerieri[p.nome_cameriere]->conto=0;
+	} else {
+		printf("impossibile eseguire l'operazione");
+	}
 }
 
-void lista_da_servire() {
-        stampa_lista(head);
-}
-*/
 void gestisci_protocollo_server(pacchetto p, int cameriere) {
-	pthread_t t1;
+	char send[sizeof(pacchetto)];
         switch(p.protocollo) {
         case 1:
                 invia_menu(connsd);
@@ -558,49 +559,79 @@ void gestisci_protocollo_server(pacchetto p, int cameriere) {
                 leggi_ordine(p,cameriere);
                 break;
         case 3:
-                modifica_ordine(p);
+				if(head!=NULL)
+					modifica_ordine(p);
+				else
+					p.protocollo=10;
+					memcpy(send,&p,sizeof(pacchetto));
+					Write(connsd,send,sizeof(send));
                 break;
         case 4:
                 evadi_ordine(p);
                 break;
         case 5:
-                stampa_lista2(head);
+				lista_piatti_attesa(p);
                 break;
         case 6:
-				printf("CUCINA SBRIGATI!!\n");
-				*sollecito+=1;
+				gestisci_sollecito(p);
                 break;
+        case 7:
+                memorizza_info(p);
+                break;
+        case 8:
+				printf("ordine per il tavolo %d cancellato\n", p.tavolo);
+                head = cancella_pacchetto(p);
+                break;
+        case 9:
+                stampa_statistiche();
+                break;
+        case 10:
+				invia_conto(p);
+				break;
         }
 }
 
-void handler(int signum) {
-	int pid,status;
-	fprintf(stdout,"signum=%d\n",signum);
-	switch (signum) {
-		case SIGCHLD:
-			while((pid=waitpid(-1,&status,WNOHANG))>0) {
-				fprintf(stdout,"Processo [%d] terminato.\n",pid);
-				if (WIFSIGNALED(status)) {
-					fprintf(stdout,"Errore. Processo [%d] e' terminato a causa del segnale %d.\n",pid,WTERMSIG(status));
-					// se nel figlio avviene un errore come buffer overflow e viene generato il segnale SIGSEGV questo non viene segnalato dal padre
-					// attraverso questo if(WIFSIGNALED(status)) si riesce a capire se il figlio e' terminato in maniera prematura x un errore.
-				}
-			}
-		break;
-		case SIGINT:
-			fprintf(stdout,"*** figlio *** rilevato segnale SIGINT, la connessione attiva continua a essere gestita\n");
-		break;
+void shared() {
+	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6;
 
-	}
+    if((shmid1 = (shmget(IPC_PRIVATE, sizeof(int), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+
+    if((shmid2 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+    if((shmid3 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+    if((shmid4 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+
+    if((shmid5 = (shmget(IPC_PRIVATE, sizeof(int), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+
+    if((shmid6 = (shmget(IPC_PRIVATE, sizeof(int)*50, 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+
+    client = (int *) shmat(shmid1, 0, 0);
+    tempo_medio = (double *) shmat(shmid2, 0, 0);
+    tempo_di_servizio = (double *) shmat(shmid3, 0, 0);
+    tempo_totale = (double *) shmat(shmid4, 0, 0);
+    incasso = (int *) shmat(shmid5, 0, 0);
+    piatti_pronti = (int *) shmat(shmid6, 0, 0);
+
 }
+
 int main(int argc, char **argv) {
 
-        int                             listensd, /*connsd,*/clilen,port,ready,/*client[FD_SETSIZE],*/i,maxi,maxd,n, dimensione;
-        char                            rcv[MAXLINE],data[MAXLINE];
+        int                             /*listensd, connsd,*/clilen,port,ready,/*client[FD_SETSIZE],*/i,maxi,maxd,n, dimensione;
+        char                            rcv[MAXLINE],data[MAXLINE], send[MAXLINE];
         socklen_t                       servaddr_len,cliaddr_len;
         fd_set                          rset,allset;
         time_t                          ticks;
-        int                             shmid, shmid2, shmid3, shmid4, shmid5, shmid6, shmid7, shmid8, shmid9;
         struct sockaddr_in              servaddr, cliaddr;
         struct timeval                  timeout;
         pacchetto p;
@@ -633,6 +664,9 @@ int main(int argc, char **argv) {
         /* inizializzo l'array dei client */
 
 /*      client[0] = listensd; */
+
+        shared();
+
         maxi = -1;
         for(i=1;i<FD_SETSIZE;i++)
                 client[i] = -1;
@@ -649,105 +683,37 @@ int main(int argc, char **argv) {
         printf("apertura cucina %.24s\n", ctime(&ticks));
 
 
-        if((shmid = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
+        init_dispensa();
+        Signal(SIGINT, handler);
+    	Signal(SIGPIPE, SIG_IGN);
 
-        if((shmid2 = (shmget(IPC_PRIVATE, sizeof(int)*20, 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-
-        if((shmid3 = (shmget(IPC_PRIVATE, sizeof(pacchetto), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-
-        if((shmid4 = (shmget(IPC_PRIVATE, sizeof(dispensa), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-
-
-        if((shmid5 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-        if((shmid6 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-        if((shmid7 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-
-        if((shmid8 = (shmget(IPC_PRIVATE, sizeof(int), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-        if((shmid9 = (shmget(IPC_PRIVATE, sizeof(int), 0600))) < 0) {
-                err_sys("errore nell shmget");
-        }
-
-
-        medio = (double *) shmat(shmid, 0, 0);
-
-        tempo_medio = (double *) shmat(shmid5, 0, 0);
-        tempo_di_servizio = (double *) shmat(shmid6, 0, 0);
-        tempo_totale = (double *) shmat(shmid7, 0, 0);
-        incasso = (int *) shmat(shmid8, 0, 0);
-        sollecito = (int *) shmat(shmid9, 0, 0);
-        *sollecito+=1;
-
-//      head = (pacchetto *) shmat(shmid2, 0, 0);
-
-//      tail = (pacchetto *) shmat(shmid2, 0, 0);
-
-//        *l_piatti = (int *) shmat(shmid2, 0, 0);
-
-        temporaneo = (pacchetto *) shmat(shmid3, 0, 0);
-
-
-        d = (dispensa *) shmat(shmid4, 0, 0);
-
-        d->piatto_1[0] = 100;
-        d->piatto_1[1] = 7;
-
-        d->piatto_2[0] = 100;
-        d->piatto_2[1] = 20;
-
-        d->piatto_3[0] = 100;
-        d->piatto_3[1] = 18;
-
-        d->piatto_4[0] = 100;
-        d->piatto_4[1] = 15;
-
-        d->piatto_5[0] = 100;
-        d->piatto_5[1] = 35;
-
-        d->piatto_6[0] = 100;
-        d->piatto_6[1] = 25;
-
-        d->piatto_7[0] = 100;
-        d->piatto_7[1] = 50;
-
-        d->piatto_8[0] = 100;
-        d->piatto_8[1] = 5;
-
-        d->piatto_9[0] = 100;
-        d->piatto_9[1] = 8;
 
         for(;;) {
-        //	signal(SIGINT, handler);
+
                 rset = allset;
-                timeout.tv_sec = 3;
+                timeout.tv_sec = 6000;
+                timeout.tv_usec = 0;
 
                 /* eseguo la select e quando il socket e' attivo faccio accept */
                 if((ready = select(maxd+1,&rset,NULL,NULL,&timeout)) < 0)
                         err_sys("errore nella select");
 
+                if(ready==0) {
+                    ticks = time(NULL);
+                    snprintf(data,sizeof(data),"%.24s\r\n", ctime(&ticks));
+                    printf("\nchiusura cucina %.24s\n", ctime(&ticks));
+                	stampa_statistiche();
+                    Close(connsd);
+                    exit(0);
+                }
 
                 /* se ci sono gestisco richieste di connessione */
                 if(FD_ISSET(listensd,&rset)) {
 
                         cliaddr_len = sizeof(cliaddr);
 
-                        connsd=Accept(listensd, (struct sockaddr *) &cliaddr, &clilen);
-                        Getsockname(connsd,(struct sockaddr *)&servaddr,&servaddr_len);
+                        connsd=Accept(listensd, (struct sockaddr *) &cliaddr, (socklen_t *)&clilen);
+                        Getsockname(listensd,(struct sockaddr *)&servaddr,&servaddr_len);
                         Getpeername(connsd,(struct sockaddr *)&cliaddr,&cliaddr_len);
 
                         printf("\nserver --> *** indirizzo IP: %s\tPORTA: %d ***\n",inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port));
@@ -758,7 +724,12 @@ int main(int argc, char **argv) {
                         for(i=1;i<FD_SETSIZE;i++) {
                                 if(client[i] < 0) {
                                         client[i] = connsd;
+                                        printf("\n\t dentro il padre connsd = %d\n",client[i]);
                                         printf("\ncameriere [%d] connesso!\n\n", i);
+                                        p.nome_cameriere = i;
+                                        p.protocollo=1;
+                                        memcpy(send,&p,sizeof(pacchetto));
+                                        Write(connsd,send,sizeof(send));
                                         camerieri++;
                                         break;
                                 }
@@ -791,8 +762,8 @@ int main(int argc, char **argv) {
                                         client[i] = -1;
                                         FD_CLR(connsd, &allset);
                                 } else {
-                                                memcpy(&p,rcv,sizeof(pacchetto));
-                                                gestisci_protocollo_server(p,i);
+                                        memcpy(&p,rcv,sizeof(pacchetto));
+                                        gestisci_protocollo_server(p,i);
                                 }
                         }
                         if(--ready <= 0)
