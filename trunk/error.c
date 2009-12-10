@@ -84,7 +84,7 @@ err_quit(const char *fmt, ...)
 
 /* Stampa un messaggio e restituisce il controllo alla funzione chiamante. 
    Per invocare la funzione bisogna specificare "errnoflag" per indicare il
-   codice dell'errore che si è verificato e "level" per indicare il livello
+   codice dell'errore che si ï¿½ verificato e "level" per indicare il livello
    di syslog. */
 
 static void
@@ -105,7 +105,7 @@ err_doit(int errnoflag, int level, const char *fmt, va_list ap)
 	strcat(buf, "\n");
 
 	if (daemon_proc) {
-		syslog(level, buf);
+/*		syslog(level, buf);*/
 	} else {
 		fflush(stdout);		/* se stdout and stderr coincidono */
 		fputs(buf, stderr);

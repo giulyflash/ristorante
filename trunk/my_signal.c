@@ -32,3 +32,12 @@ gestisci_zombie (int segnale)
 
 }
                 
+sighandler_t
+Signal(int signum, sighandler_t handler) {
+	sighandler_t n;
+	n = signal(signum, handler);
+	if( n == SIG_ERR) {
+		err_sys("signal SIGPIPE failed: ");
+	}
+	return(n);
+}

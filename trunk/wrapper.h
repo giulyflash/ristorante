@@ -40,8 +40,4 @@ Fork(void);
 void
 Close(int fd);
 
-typedef void (*sighandler_t)(int);
-
-sighandler_t
-Signal(int signum, sighandler_t handler);
 
