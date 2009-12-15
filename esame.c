@@ -1,11 +1,21 @@
+/*
+ * esame.c
+ *
+ *  Created on: Apr 17, 2009
+ *      Author: 10011342
+ */
+
 #include "basic.h"
 #include "esame.h"
 
-
+/*generazione di un nuovo pacchetto*/
 pacchetto *newPacchetto(void) {
 	return(pacchetto*)malloc(sizeof(pacchetto));
 }
 
+/*apertura del file menu e invio al cameriere
+ * viene controllato che il menu sia presente
+ */
 void invia_menu(int connsd) {
 	FILE *fd;
 	char buffer[MAXLINE],str[MAXLINE];
@@ -39,6 +49,7 @@ void leggi_menu(int sockfd) {
 	}
 }
 
+/*gestione di stampa dell'ordine*/
 void stampa_ordine(pacchetto p) {
 	int i=0;
 	printf("cameriere %d tavolo %d\n", p.nome_cameriere,p.tavolo);
@@ -49,7 +60,7 @@ void stampa_ordine(pacchetto p) {
 	printf("\n");
 }
 
-
+/*gestione dell'invio di un pacchetto*/
 void my_send(int protocollo, pacchetto p) {
 	char send[sizeof(pacchetto)];
 	p.protocollo = protocollo;
@@ -57,6 +68,7 @@ void my_send(int protocollo, pacchetto p) {
 	Write(sockfd,send,sizeof(send));
 }
 
+/**/
 void coda_tavoli(pacchetto p) {
 	int i=0;
 	printf("\t---\tin attesa dei piatti\t---\n");
@@ -69,7 +81,7 @@ void coda_tavoli(pacchetto p) {
 }
 
 
-
+/*inizializzazione della dispensa*/
 void init_dispensa() {
 	int shmid4;
     if((shmid4 = (shmget(IPC_PRIVATE, sizeof(dispensa), 0600))) < 0) {
@@ -104,9 +116,10 @@ void init_dispensa() {
     d->piatto_9[1] = 8;
 }
 
+/*gestione del menu cameriere*/
 void menu_cameriere() {
-		printf("\n\t\t\033[34m *** SeS Restaurant ***\033[0m\n");
-        printf("\t\n\033[34m *** Applicazione di rete per la Ristorazione ***\033[0m\n\n");
+		printf("\n\t\t*** SeS Restaurant ***\n");
+        printf("\t\n *** Applicazione di rete per la Ristorazione ***\n\n");
         printf("\t1. nuovo ordine\n");
         printf("\t2. modifica ordine\n");
         printf("\t3. invia sollecito\n");

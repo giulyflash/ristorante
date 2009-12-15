@@ -1,3 +1,10 @@
+/*
+ * cameriere.c
+ *
+ *  Created on: Apr 17, 2009
+ *      Author: Sergio Urbano, Alberto Lavezzari
+ */
+
 #include "basic.h"
 #include "esame.h"
 
@@ -7,52 +14,62 @@ double  tempo_medio, tempo_di_servizio, tempo_totale, medio;
 
 pacchetto *temporaneo;
 
+/*gestione del protocollo di comunicazione lato client*/
 void gestisci_protocollo_client(pacchetto p) {
 	pacchetto tmp;
         switch(p.protocollo) {
+        /* messaggio di benvenuto: memorizzo il nome del cameriere all'interno di una var globale che usero' piu' avanti */
         case 1:
                 me = p.nome_cameriere;
                 printf("benvenuto cameriere %d \n", me);
                 menu_cameriere();
                 break;
+        /*torna al menu principale*/
         case 3:
                 menu_cameriere();
                 break;
+        /*segnalazione tavolo servito correttamente*/
         case 4:
                 printf("\n\t\033[31m *** tavolo servito ***\033[0m\n");
                 break;
+        /*gestione stampa coda tavoli in attesa*/
         case 5:
         	   coda_tavoli(p);
                 break;
-
+        /*gestione modifica ordine*/
         case 6:
-                modifica_ordine(p);
-                break;
+                modifica_ordine_client(p);
+        /*notifica di piatto in preparazione*/        break;
         case 7:
-                printf("\n\033[31m *** la cucina sta preparando il piatto %s per il tavolo %d ***\033[0m\n",p.messaggio, p.tavolo);
+                printf("\n *** la cucina sta preparando il piatto %s per il tavolo %d ***\n",p.messaggio, p.tavolo);
                 menu_cameriere();
                 break;
+        /*segnalazione di ordine gia' presente*/
         case 8:
-                printf("\n\033[31m *** l' ordine per questo tavolo e' gia stato memorizato ***\033[0m\n") ;
+                printf("\n *** l' ordine per questo tavolo e' gia stato memorizato ***\n") ;
                 menu_cameriere();
                 break;
+        /*segnalazione di errore nell'ordine*/
         case 9:
-                printf("\n\033[31m *** il piatto %d non e' disponibile [ordine eliminato, riprendi l'ordine] ***\033[0m\n", p.esauriti) ;
+                printf("\n *** il piatto %d non e' disponibile [ordine eliminato, riprendi l'ordine] ***\n", p.esauriti) ;
                 p.modificato = 1;
                 tmp.tavolo = p.tavolo;
                 my_send(8,p);
                 menu_cameriere();
                 break;
+        /*segnalazione ordine non presente*/
         case 10:
-                printf("\n\033[31m *** ordine non presente in lista ***\033[0m\n");
+                printf("\n *** ordine non presente in lista ***\n");
                 menu_cameriere();
                 break;
+        /*segnalazione errore selezione nella selezione tavolo*/
         case 11:
 				printf("hai selezionato il tavolo sbagliato\n");
 				pronti=1;
 				break;
+		/*segnalazione di piatto pronto per il tavolo*/
         case 12:
-                printf("\n\033[31m *** la cucina ha terminato di preparare il piatto %d per il tavolo %d ***\033[0m\n", p.pronti,p.tavolo);
+                printf("\n *** la cucina ha terminato di preparare il piatto %d per il tavolo %d ***\n", p.pronti,p.tavolo);
                 cont++;
                 pronti=1;
                 if(cont==1) {
@@ -66,36 +83,123 @@ void gestisci_protocollo_client(pacchetto p) {
                 }
                 menu_cameriere();
                 break;
+        /*segnalazione di corretta conclusione dell'operazione*/
         case 13:
-                printf("\n\033[31m *** OTTIMO LAVORO!! ***\033[0m\n");
+                printf("\n *** OTTIMO LAVORO!! ***\n");
                 menu_cameriere();
                 break;
+        /*segnalazione eccessivo ritardo del cameriere*/
         case 14:
-                printf("\n\033[31m *** non hai servito il tuo tavolo, la cucina ha passato l'ordine a un altro cameriere ***\033[0m\n");
+                printf("\n *** non hai servito il tuo tavolo, la cucina ha passato l'ordine a un altro cameriere ***\n");
                 menu_cameriere();
                 break;
-
+        /*gestione stampa del conto, controllo se il valore relativo al conto della nostra struttura e' stato modificato [ordine evaso] oppure no*/
         case 15:
         	if(p.conto == 0) {
         		printf("conto saldato\n");
         		menu_cameriere();
         	} else {
-				printf("\n\033[31m *** il conto e' di %d euro ***\033[0m\n", p.conto);
+				printf("\n *** il conto e' di %d euro ***\n", p.conto);
 				menu_cameriere();
         	}
                 break;
-
-
+        /*segnalazione esaurimento ingradienti per il piatto selezionato*/
         case 20:
                 printf("sono terminati gli ingredienti per il piatto %d \n", p.esauriti);
                 p.error=1;
                 my_send(8,p);
-                modifica_ordine(p);
+                modifica_ordine_client(p);
                 break;
 
         }
 }
 
+/*gestione input da tastiera*/
+void gestisci_input(char *input_cameriere) {
+		pacchetto p;
+        switch(atoi(input_cameriere)) {
+        /*richiama generazione di un nuovo ordine*/
+        case 1:
+                nuovo_ordine();
+                break;
+		/*richiama la modifica di un ordine*/
+        case 2:
+                printf("per quale tavolo vuoi modificare l'ordine?\n");
+                scanf("%d",&p.tavolo);
+                my_send(3,p);
+                break;
+		/*richiama l'invio di un sollecito alla cucina*/
+        case 3:
+				invia_sollecito();
+                break;
+		/*richiama la lista di piatti pronti per il tavolo*/
+        case 4:
+        	if(pronti==1)
+				printf("\n\til tavolo %d attende il piatto %d\n", tavolo_backup, piatto_backup);
+        	else
+        		printf("\n\tnon ci sono piatti pronti\n");
+				menu_cameriere();
+                break;
+		/*richiama la funzione per servire il piatto*/
+        case 5:
+                servi(p);
+                break;
+		/*richiama la richiesta di conto*/
+        case 6:
+				richiedi_conto();
+                break;
+		/*terminazione*/
+        case 7:
+                esci();
+                break;
+		/*easter egg: permette al cameriere di stampare le statistiche della cucina (VENGONO VISUALIZZATE SUL SERVER)*/
+        case 9:
+                my_send(9,p);
+                menu_cameriere();
+                break;
+		/*segnalazione di scelta non valida*/
+        default:
+                printf("\nhai effettuato una scelta non valida \n");
+                menu_cameriere();
+                break;
+        }
+}
+
+
+
+
+/*	gestione nuovo ordine
+ *	dico alla cucina che voglio fare un nuovo ordine
+ *	questa mi invia il menu
+ *	lo leggo
+ * 	scelgo i piatti tramite la funzione appositamente creata
+ * 	imposto sollecito a 1 [default]
+ * 	invio l'ordine con il protocollo relativo al nuovo ordine
+ *
+ * 		|PROTOCOLLO|id cameriere|id tavolo|lista_piatti|PAYLOAD|
+ *
+ */
+void nuovo_ordine() {
+        pacchetto p, tmp;
+        my_send(1,p);   /* dico alla cucina che devo fare un nuovo ordine [protocollo: 1] */
+        leggi_menu(sockfd);     /* la cucina mi invia il menu e lo stampo a video */
+        tmp = scegli_piatti(p);
+        tmp.sollecito=1;
+        if(tmp.ordine[0] != 0) {
+        	my_send(2,tmp);    /* a questo punto invio alla cucina il nuovo ordine [protocollo: 2] */
+        }
+        menu_cameriere();
+}
+
+
+/* gestione della scelta dei piatti
+ * memorizzo le informazioni utili per creare l'ordine: id tavolo, id piatto, porzioni.
+ * controlli vengono effettuati su ogni campo.
+ * una volta finito di memorizzare i piatti ritorno un pacchetto cosi formato:
+ *
+ * 				|id cameriere|id tavolo|lista_piatti|PAYLOAD|
+ *
+ */
 pacchetto scegli_piatti(pacchetto tmp) {
 	char c[1];
 	int piatto, porzioni, i = 0, tavolo, nome = tmp.nome_cameriere, control = 0;
@@ -159,19 +263,15 @@ pacchetto scegli_piatti(pacchetto tmp) {
 	return (p);
 }
 
-void nuovo_ordine() {
-        pacchetto p, tmp;
-        my_send(1,p);   /* dico alla cucina che devo fare un nuovo ordine [protocollo: 1] */
-        leggi_menu(sockfd);     /* la cucina mi invia il menu e lo stampo a video */
-        tmp = scegli_piatti(p);
-        tmp.sollecito=1;
-        if(tmp.ordine[0] != 0) {
-        	my_send(2,tmp);    /* a questo punto invio alla cucina il nuovo ordine [protocollo: 2] */
-        }
-        menu_cameriere();
-}
+/*	gestione modifica ordine
+ *	il cameriere puo' aggiungere un piatto o cancellarlo
+ * 	memorizzo le informazioni come nel caso della scegli_piatti
+ *	imposto il flag ordine modificato e invio il pacchetto con
+ *	il numero di protocollo corrispondente.
+ */
 
-void modifica_ordine(pacchetto p) {
+
+void modifica_ordine_client(pacchetto p) {
 
 	int control = 0;
 	int i = 0, piatto = 0, porzioni = 0, count;
@@ -185,6 +285,7 @@ void modifica_ordine(pacchetto p) {
 	printf("\ncosa desideri fare:\n");
 	scanf("%d", &operazione);
 	switch (operazione) {
+	/*aggiunta piatto*/
 	case 1:
 		p.modificato = 1;
 		count = 0, i = 0;
@@ -229,7 +330,7 @@ void modifica_ordine(pacchetto p) {
 		}
 		p.esauriti = count;
 		break;
-
+	/*cancellazione piatto*/
 	case 2:
 		p.modificato = 2;
 		count = 0, i = 0;
@@ -248,9 +349,11 @@ void modifica_ordine(pacchetto p) {
 			}
 		p.esauriti=count;
 		break;
+	/*ritorno al menu*/
 	case 3:
 		menu_cameriere();
 		break;
+	/*segnalazione di scelta non valida*/
 	default:
 		printf("\nhai fatto una scelta non valida\n");
 		menu_cameriere();
@@ -263,10 +366,19 @@ void modifica_ordine(pacchetto p) {
 	my_send(2, p);
 }
 
+/*terminazione client*/
 void esci() {
         exit(0);
 }
-void servi_piatto(pacchetto p) {
+
+/*	gestione consegna piatto
+ *	memorizzo il numero del tavolo da servire
+ * 	memorizzo il piatto da servire
+ * 	controllo se queste due scelte sono corrette
+ * 	in caso positivo servo il piatto [calcolo i tempi di servizio e li memorizzo]
+ *  invio al server i dati utili.
+ */
+void servi(pacchetto p) {
 	pacchetto tmp;
 	int tavolo;
 	int piatto;
@@ -299,6 +411,10 @@ void servi_piatto(pacchetto p) {
     menu_cameriere();
 }
 
+/*	gestione del sollecito verso la cucina
+ *	memorizzo il tavolo
+ *	invio alla cucina il sollecito mettendo come protocollo quello corrispondente
+ */
 void invia_sollecito() {
 	pacchetto p;
 	printf("per quale tavolo vuoi inviare il sollecito?\n");
@@ -308,6 +424,12 @@ void invia_sollecito() {
 	menu_cameriere();
 }
 
+/*	gestione richiesta conto per il tavolo
+ *	scelgo il tavolo di cui stampare il conto
+ * 	controllo se esiste
+ *	in caso positivo visualizzo il conto
+ *	in caso negativo stampo un warning
+ */
 void richiedi_conto() {
 	pacchetto p;
 	printf("per quale tavolo vuoi richiedere il conto? [devi prima aver servito tutti i piatti] \n");
@@ -322,48 +444,7 @@ void richiedi_conto() {
 	menu_cameriere();
 }
 
-void gestisci_input(char *input_cameriere) {
-		pacchetto p;
-        switch(atoi(input_cameriere)) {
-        case 1:
-                nuovo_ordine();
-                break;
-        case 2:
-                printf("per quale tavolo vuoi modificare l'ordine?\n");
-                scanf("%d",&p.tavolo);
-                my_send(3,p);
-                break;
-        case 3:
-				invia_sollecito();
-                break;
-        case 4:
-        	if(pronti==1)
-				printf("\n\til tavolo %d attende il piatto %d\n", tavolo_backup, piatto_backup);
-        	else
-        		printf("\n\tnon ci sono piatti pronti\n");
-				menu_cameriere();
-                break;
-        case 5:
-                servi_piatto(p);
-                break;
-        case 6:
-				richiedi_conto();
-                break;
-        case 7:
-                esci();
-                break;
-
-        case 9:
-                my_send(9,p);
-                menu_cameriere();
-                break;
-        default:
-                printf("\nhai effettuato una scelta non valida \n");
-                menu_cameriere();
-                break;
-        }
-}
-
+/*MAIN*/
 int main(int argc, char **argv) {
 
         int port, maxd, n;
