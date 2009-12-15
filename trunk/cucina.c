@@ -1,8 +1,16 @@
+/*
+ * cucina.c
+ *
+ *  Created on: Apr 17, 2009
+ *      Author: Sergio Urbano, Alberto Lavezzari
+ */
+
 #include "basic.h"
 #include "esame.h"
 
-int numero_ordine=0, camerieri, max, *sollecito, *incasso, *client/*[FD_SETSIZE]*/, k=0,listensd;
+int numero_ordine=0, camerieri, max, *sollecito, *incasso, client[FD_SETSIZE], k=0,listensd;
 double  *tempo_medio, *tempo_di_servizio, *tempo_totale, tempo_tot,info[255];
+//struct sockaddr_in *cliaddr;
 
 pacchetto *lista_camerieri[4];
 int shmid_t;
@@ -26,7 +34,7 @@ void handler(int signum) {
 
 	}
 }
-
+/* gestione inserimento di un nuovo pacchetto in lista*/
 void inserisci_pacchetto(pacchetto *p){
         if (head == NULL) {
                 head = p;
@@ -40,6 +48,44 @@ void inserisci_pacchetto(pacchetto *p){
 
 }
 
+/*gestione cancellazione di un pacchetto dalla lista*/
+pacchetto *cancella_pacchetto(pacchetto p) {
+        pacchetto *tmp,*tmp2;
+        char send[sizeof(pacchetto)];
+        tmp2 = head;
+        if ((p.nome_cameriere == tmp2->nome_cameriere) && (p.tavolo == tmp2->tavolo)) {
+                if(tmp2->next != NULL) {
+                        return(tmp2->next);
+                } else {
+                        head = NULL;
+                        tail = NULL;
+                        return(head);
+                }
+        }
+        while(tmp2->next != NULL) {
+                if((p.nome_cameriere == tmp2->next->nome_cameriere) && (p.tavolo == tmp2->next->tavolo)) {
+                        if(tmp2->next->next == NULL) {
+                                free(tmp2->next);
+                                tmp2->next = NULL;
+                                tail = tmp2;
+                                return(head);
+                        }
+                        tmp = tmp2->next->next;
+                        free(tmp2->next);
+                        tmp2->next = tmp;
+                        return(head);
+                }
+                tmp2 = tmp2->next;
+        }
+
+        p.protocollo = 10;
+        memcpy(send,&p,sizeof(pacchetto));
+        Write(connsd,send,sizeof(send));
+
+        return(head);
+}
+
+/*gestione di stampa della lista ordini*/
 void stampa_lista(pacchetto *p) {
         int i;
         printf("\n\t*** lista ordini ***\n");
@@ -57,6 +103,7 @@ void stampa_lista(pacchetto *p) {
         printf("\t*** fine lista ***\n");
 }
 
+/*gestione di stampa dei piatti pronti in attesa di essere serviti*/
 void lista_piatti_attesa(pacchetto p) {
 	int i=0;
 	while(i!=10) {
@@ -67,32 +114,36 @@ void lista_piatti_attesa(pacchetto p) {
 	}
 }
 
+/*gestione dei piatti pronti per essere serviti
+ * viene effettuato un controllo se il cameriere serve il piatto
+ * se dopo 3 solleciti il cameriere non ha ancora servito, il piatto viene passato ad un altro cameriere
+ * quando il piatto viene servito viene inviata una comunicazione di operazione a buon fine
+ * e viene incrementato l'incasso di giornata
+*/
 void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 	int j=3, cont=0;
 	pacchetto tmp, *tmp2;
 	char send[sizeof(pacchetto)];
 	tmp2 = &p;
 	p.pronti=i;
-	while(j!=0) {
-		if(piatti_pronti[p.nome_cameriere]!=0) {
-			tmp.protocollo = 12;
-			tmp.pronti=i;
-			tmp.tavolo=p.tavolo;
-			memcpy(send, &tmp, sizeof(pacchetto));
-			Write(client[cameriere], send, sizeof(send));
-			printf("\n\t dentro la servi_piatto lanciata all'interno di una fork() connsd = %d\n\n",client[cameriere]);
-			printf("cameriere %d devi servire il piatto %d al tavolo %d\n", cameriere, i, p.tavolo);
-			cont++;
-			sleep(5);
-		}
-		j--;
-	}
-	if(piatti_pronti[p.nome_cameriere]==0) {
-		printf("piatto servito\n");
-	}
-	if(lista_camerieri[cameriere]->ttl==2) {
-		printf("piatto non servito\n");
-	} else {
+	int k;
+    while(j!=0) {
+            if(piatti_pronti[i]!=0) {
+                    tmp.protocollo = 12;
+                    tmp.pronti=i;
+                    tmp.tavolo=p.tavolo;
+                    memcpy(send, &tmp, sizeof(pacchetto));
+                    Write2(client[cameriere], send, sizeof(send));
+                    printf("cameriere %d devi servire il piatto %d al tavolo %d\n", cameriere, i, p.tavolo);
+                    cont++;
+                    sleep(5);
+            }
+            j--;
+    }
+    if(piatti_pronti[i]==0) {
+            printf("piatto servito\n");
+    }
+
 	if(cont>2) {
 		printf("Il cameriere non ha servito i piatti nel tempo prestabilito [inviate 3 notifiche], passo l'ordine a un altro cameriere\n");
 		if(cameriere<2) {
@@ -112,10 +163,19 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 		memcpy(send, &tmp, sizeof(pacchetto));
 		Write(client[cameriere], send, sizeof(send));
 	}
-	}
+
 }
 
-
+/*gestione di preparazione dei piatti
+ * viene effettuato un controllo sull'ordine
+ * se il piatto risulta non modificato viene preparato normalmente
+ * se il flag segnala che e' stato modificato la sua preparazione viene scartata, viene segnalata
+ * la sua eliminazione al cameriere e si procede con gli altri elementi dell'ordine
+ * nella preparazione viene effettuato un controllo sulle porzioni disponibili in dispensa
+ * se l'ordine e' soddisfacibile le porzioni vengono decrementate e
+ * si procede al calcolo del tempo di preparazione e del costo degli n piatti in preparazione
+ * se l'ordine non e' soddisfacibile viene segnalato l'esaurimento del piatto i al cameriere
+ */
 void prepara_piatti(pacchetto p) {
 	int time=0;
 	int i = 0, tot = 0;
@@ -140,7 +200,7 @@ void prepara_piatti(pacchetto p) {
     		Signal(SIGPIPE, SIG_IGN);
     		sleep(15);
     		*/
-    		//sleep(15);
+    		sleep(5);
     		Signal(SIGPIPE, SIG_IGN);
 			while(lista_camerieri[p.nome_cameriere]->ordine[i] != '\0') {
 					switch (lista_camerieri[p.nome_cameriere]->ordine[i]) {
@@ -357,8 +417,9 @@ void prepara_piatti(pacchetto p) {
 						time=time/lista_camerieri[p.nome_cameriere]->sollecito;
 						sleep(time);
 						printf("piatto pronto, comincio a notificarlo al cameriere\n");
-						piatti_pronti[p.nome_cameriere]=1;
-						servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
+                         piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
+                         servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
+
 					}
 					i+=2;
 				}
@@ -368,7 +429,7 @@ void prepara_piatti(pacchetto p) {
 
 }
 
-
+/*gestione di lettura dell'ordine ricevuto*/
 void leggi_ordine(pacchetto p, int i) {
 	int trovato = 0;
 	char send[sizeof(pacchetto)];
@@ -410,43 +471,9 @@ void leggi_ordine(pacchetto p, int i) {
 	}
 }
 
-pacchetto *cancella_pacchetto(pacchetto p) {
-        pacchetto *tmp,*tmp2;
-        char send[sizeof(pacchetto)];
-        tmp2 = head;
-        if ((p.nome_cameriere == tmp2->nome_cameriere) && (p.tavolo == tmp2->tavolo)) {
-                if(tmp2->next != NULL) {
-                        return(tmp2->next);
-                } else {
-                        head = NULL;
-                        tail = NULL;
-                        return(head);
-                }
-        }
-        while(tmp2->next != NULL) {
-                if((p.nome_cameriere == tmp2->next->nome_cameriere) && (p.tavolo == tmp2->next->tavolo)) {
-                        if(tmp2->next->next == NULL) {
-                                free(tmp2->next);
-                                tmp2->next = NULL;
-                                tail = tmp2;
-                                return(head);
-                        }
-                        tmp = tmp2->next->next;
-                        free(tmp2->next);
-                        tmp2->next = tmp;
-                        return(head);
-                }
-                tmp2 = tmp2->next;
-        }
 
-        p.protocollo = 10;
-        memcpy(send,&p,sizeof(pacchetto));
-        Write(connsd,send,sizeof(send));
-
-        return(head);
-}
-
-void modifica_ordine(pacchetto p) {
+/*gestione della modifica dell'ordine lato server*/
+void modifica_ordine_server(pacchetto p) {
         char send[sizeof(pacchetto)];
         pacchetto *tmp;
         int trovato = 0;
@@ -479,11 +506,14 @@ void modifica_ordine(pacchetto p) {
         head = cancella_pacchetto(p);
 }
 
+/*gestione dell'evasione ordine*/
 void evadi_ordine(pacchetto p) {
-	printf("sono arrivato\n");
-	piatti_pronti[p.nome_cameriere]='\0';
+	printf("sono arrivato cameriere %d\n", p.nome_cameriere);
+	piatti_pronti[p.esauriti]='\0';
 	printf("ho messo lo zero\n");
 }
+
+/*gestione stampa delle statistiche della cucina*/
 void stampa_statistiche() {
 
 	int j=0;
@@ -504,6 +534,7 @@ void memorizza_info(pacchetto p) {
 	k+=2;
 }
 
+/*gestionde del sollecito*/
 void gestisci_sollecito(pacchetto p) {
 	pacchetto *tmp;
 	int trovato=0;
@@ -524,6 +555,7 @@ void gestisci_sollecito(pacchetto p) {
 	}
 }
 
+/*gestione di invio del conto al tavolo richiedente*/
 void invia_conto(pacchetto p) {
 	char send[sizeof(pacchetto)];
 	pacchetto tmp, *tmp2;
@@ -549,55 +581,73 @@ void invia_conto(pacchetto p) {
 	}
 }
 
+/*gestione del protocollo di comunicazione lato server*/
 void gestisci_protocollo_server(pacchetto p, int cameriere) {
 	char send[sizeof(pacchetto)];
         switch(p.protocollo) {
+        /*invia il menu al cameriere*/
         case 1:
                 invia_menu(connsd);
                 break;
+        /*legge l'ordine consegnato dal cameriere*/
         case 2:
                 leggi_ordine(p,cameriere);
                 break;
+        /*richiama la modifica di un ordine*/
         case 3:
 				if(head!=NULL)
-					modifica_ordine(p);
+					modifica_ordine_server(p);
 				else
 					p.protocollo=10;
 					memcpy(send,&p,sizeof(pacchetto));
 					Write(connsd,send,sizeof(send));
                 break;
+        /*richiama la gestione di evasione ordini*/
         case 4:
                 evadi_ordine(p);
                 break;
+        /*richiama la lista dei piatti in attesa*/
         case 5:
 				lista_piatti_attesa(p);
                 break;
+        /*richiama la gestione di un sollecito*/
         case 6:
 				gestisci_sollecito(p);
                 break;
         case 7:
                 memorizza_info(p);
                 break;
+        /*richiama la cancellazione di un ordine*/
         case 8:
 				printf("ordine per il tavolo %d cancellato\n", p.tavolo);
                 head = cancella_pacchetto(p);
                 break;
+		/*richiama la stampa delle statistiche della cucina*/
         case 9:
                 stampa_statistiche();
                 break;
+		/*richiama l'invio del conto ad un tavolo*/
         case 10:
 				invia_conto(p);
 				break;
         }
 }
 
+/*gestione inizializzazione delle aree di memoria condivisa
+ *	client 				zona condivisa per gli identificatori dei client connessi
+ *  tempo_medio 		zona condivisa per il tempo medio di servizio
+ *  tempo_di_servizio	zona condivisa per il tempo di servizio di un singolo ordine
+ *  tempo_totale		zona condivisa per il tempo totale di servizio del totale degli ordini
+ *  incasso				zona condivisa per l'incasso totale del ristorante
+ *  piatti_pronti		zona condivisa per la lista dei piatti pronti in attesa
+ */
 void shared() {
-	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6;
-
+	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6, shmid7;
+/*
     if((shmid1 = (shmget(IPC_PRIVATE, sizeof(int), 0600))) < 0) {
             err_sys("errore nell shmget");
     }
-
+*/
     if((shmid2 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
             err_sys("errore nell shmget");
     }
@@ -616,7 +666,14 @@ void shared() {
             err_sys("errore nell shmget");
     }
 
-    client = (int *) shmat(shmid1, 0, 0);
+/*
+    if((shmid7 = (shmget(IPC_PRIVATE, sizeof(struct sockaddr_in), 0600))) < 0) {
+                err_sys("errore nell shmget");
+        }
+    cliaddr = (struct sockaddr_in *) shmat(shmid7, 0, 0);
+ */
+
+//    client = (int *) shmat(shmid1, 0, 0);
     tempo_medio = (double *) shmat(shmid2, 0, 0);
     tempo_di_servizio = (double *) shmat(shmid3, 0, 0);
     tempo_totale = (double *) shmat(shmid4, 0, 0);
@@ -625,6 +682,8 @@ void shared() {
 
 }
 
+
+/*MAIN*/
 int main(int argc, char **argv) {
 
         int                             /*listensd, connsd,*/clilen,port,ready,/*client[FD_SETSIZE],*/i,maxi,maxd,n, dimensione;
@@ -712,6 +771,7 @@ int main(int argc, char **argv) {
 
                         cliaddr_len = sizeof(cliaddr);
 
+//                        connsd=Accept(listensd, (struct sockaddr *) &*cliaddr, (socklen_t *)&clilen);
                         connsd=Accept(listensd, (struct sockaddr *) &cliaddr, (socklen_t *)&clilen);
                         Getsockname(listensd,(struct sockaddr *)&servaddr,&servaddr_len);
                         Getpeername(connsd,(struct sockaddr *)&cliaddr,&cliaddr_len);
@@ -730,7 +790,11 @@ int main(int argc, char **argv) {
                                         p.protocollo=1;
                                         memcpy(send,&p,sizeof(pacchetto));
                                         Write(connsd,send,sizeof(send));
+                                        printf("STRUTTURA CLIENT CONNESSIONE ACCETTATA\n");
                                         camerieri++;
+                                        for (k=1; k<10; k++){
+                                               	printf ("client[%d]=%d\n", k, client[k]);
+                                        }
                                         break;
                                 }
                         }
@@ -761,6 +825,10 @@ int main(int argc, char **argv) {
                                         printf("la connessione con il cameriere [%d] e' caduta\n", i);
                                         client[i] = -1;
                                         FD_CLR(connsd, &allset);
+                                        printf("STRUTTURA CLIENT CONNESSIONE CADUTA\n");
+                                        for (k=1; k<10; k++){
+                                               	printf ("client[%d]=%d\n", k, client[k]);
+                                        }
                                 } else {
                                         memcpy(&p,rcv,sizeof(pacchetto));
                                         gestisci_protocollo_server(p,i);

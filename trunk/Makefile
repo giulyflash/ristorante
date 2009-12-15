@@ -1,5 +1,5 @@
 
-CC = gcc -Wall -pedantic
+CC = gcc
 
 PROGS = error.o my_io.o my_signal.o wrapper.o esame.o cucina cameriere
 
