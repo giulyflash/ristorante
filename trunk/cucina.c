@@ -8,8 +8,8 @@
 #include "basic.h"
 #include "esame.h"
 
-int numero_ordine=0, camerieri, max, *sollecito, *incasso, client[FD_SETSIZE], k=0,listensd;
-double  *tempo_medio, *tempo_di_servizio, *tempo_totale, tempo_tot,info[255];
+int numero_ordine=0, camerieri, max, *sollecito, *incasso, *client, k=0,listensd;
+double  *tempo_medio, *tempo_di_servizio, *tempo_totale, tempo_tot,*info;
 //struct sockaddr_in *cliaddr;
 
 pacchetto *lista_camerieri[4];
@@ -126,15 +126,20 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 	char send[sizeof(pacchetto)];
 	tmp2 = &p;
 	p.pronti=i;
-	int k;
+	int q;
     while(j!=0) {
             if(piatti_pronti[i]!=0) {
                     tmp.protocollo = 12;
                     tmp.pronti=i;
                     tmp.tavolo=p.tavolo;
                     memcpy(send, &tmp, sizeof(pacchetto));
-                    Write2(client[cameriere], send, sizeof(send));
+                    printf("fd dentro servi_piatto %d\n", client[cameriere]);
+                    Write(client[cameriere], send, sizeof(send));
                     printf("cameriere %d devi servire il piatto %d al tavolo %d\n", cameriere, i, p.tavolo);
+                    printf("STRUTTURA CLIENT CONNESSIONE CADUTA DENTRO FORK\n");
+                    for (q=1; q<10; q++){
+                         	printf ("client[%d]=%d\n", q, client[q]);
+                    }
                     cont++;
                     sleep(5);
             }
@@ -146,6 +151,9 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 
 	if(cont>2) {
 		printf("Il cameriere non ha servito i piatti nel tempo prestabilito [inviate 3 notifiche], passo l'ordine a un altro cameriere\n");
+		tmp.protocollo = 14;
+		memcpy(send, &tmp, sizeof(pacchetto));
+		Write(client[cameriere], send, sizeof(send));
 		if(cameriere<2) {
 			lista_camerieri[cameriere+1] = lista_camerieri[cameriere];
 			cameriere = cameriere+1;
@@ -161,6 +169,7 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 		lista_camerieri[cameriere]->conto+=tot;
 		tmp.protocollo = 13;
 		memcpy(send, &tmp, sizeof(pacchetto));
+		printf("fd dentro servi_piatto %d\n", client[cameriere]);
 		Write(client[cameriere], send, sizeof(send));
 	}
 
@@ -417,8 +426,16 @@ void prepara_piatti(pacchetto p) {
 						time=time/lista_camerieri[p.nome_cameriere]->sollecito;
 						sleep(time);
 						printf("piatto pronto, comincio a notificarlo al cameriere\n");
-                         piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
-                         servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
+						/**/
+                //        piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
+				//		piatti_pronti[p.nome_cameriere]=1;
+				//		piatti_pronti[lista_camerieri[p.nome_cameriere]->id_piatto_pronto]=1;
+                //        lista_camerieri[p.nome_cameriere]->id_piatto_pronto=1;
+//						piatti_pronti[p.nome_cameriere]=1;
+						piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
+
+						printf("******* %d *******\n", piatti_pronti[lista_camerieri[p.nome_cameriere]->id_piatto_pronto]);
+                        servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
 
 					}
 					i+=2;
@@ -508,8 +525,12 @@ void modifica_ordine_server(pacchetto p) {
 
 /*gestione dell'evasione ordine*/
 void evadi_ordine(pacchetto p) {
+//	memorizza_info(p);
 	printf("sono arrivato cameriere %d\n", p.nome_cameriere);
 	piatti_pronti[p.esauriti]='\0';
+//	lista_camerieri[p.nome_cameriere]->id_piatto_pronto='\0';
+//	lista_camerieri[p.nome_cameriere]->id_piatto_pronto='\0';
+//	lista_camerieri[p.nome_cameriere]->id_piatto_pronto='\0';
 	printf("ho messo lo zero\n");
 }
 
@@ -532,6 +553,7 @@ void memorizza_info(pacchetto p) {
 	info[k] = p.tavolo;
 	info[k+1] = p.tempi[0];
 	k+=2;
+
 }
 
 /*gestionde del sollecito*/
@@ -615,6 +637,7 @@ void gestisci_protocollo_server(pacchetto p, int cameriere) {
 				gestisci_sollecito(p);
                 break;
         case 7:
+				printf("sono dentro memorizza info\n");
                 memorizza_info(p);
                 break;
         /*richiama la cancellazione di un ordine*/
@@ -642,12 +665,12 @@ void gestisci_protocollo_server(pacchetto p, int cameriere) {
  *  piatti_pronti		zona condivisa per la lista dei piatti pronti in attesa
  */
 void shared() {
-	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6, shmid7;
-/*
-    if((shmid1 = (shmget(IPC_PRIVATE, sizeof(int), 0600))) < 0) {
+	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6, shmid7,shmid8;
+
+    if((shmid1 = (shmget(IPC_PRIVATE, sizeof(int), 0777))) < 0) {
             err_sys("errore nell shmget");
     }
-*/
+
     if((shmid2 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
             err_sys("errore nell shmget");
     }
@@ -665,6 +688,10 @@ void shared() {
     if((shmid6 = (shmget(IPC_PRIVATE, sizeof(int)*50, 0600))) < 0) {
             err_sys("errore nell shmget");
     }
+    if((shmid8 = (shmget(IPC_PRIVATE, sizeof(double), 0600))) < 0) {
+            err_sys("errore nell shmget");
+    }
+
 
 /*
     if((shmid7 = (shmget(IPC_PRIVATE, sizeof(struct sockaddr_in), 0600))) < 0) {
@@ -673,20 +700,21 @@ void shared() {
     cliaddr = (struct sockaddr_in *) shmat(shmid7, 0, 0);
  */
 
-//    client = (int *) shmat(shmid1, 0, 0);
+
+    client = (int *) shmat(shmid1, 0, 0);
     tempo_medio = (double *) shmat(shmid2, 0, 0);
     tempo_di_servizio = (double *) shmat(shmid3, 0, 0);
     tempo_totale = (double *) shmat(shmid4, 0, 0);
     incasso = (int *) shmat(shmid5, 0, 0);
     piatti_pronti = (int *) shmat(shmid6, 0, 0);
-
+    info = (double *) shmat(shmid8, 0, 0);
 }
 
 
 /*MAIN*/
 int main(int argc, char **argv) {
 
-        int                             /*listensd, connsd,*/clilen,port,ready,/*client[FD_SETSIZE],*/i,maxi,maxd,n, dimensione;
+        int                             /*listensd, connsd,*/clilen,port,ready,/*client[FD_SETSIZE],*/i,maxi,maxd,n, dimensione,q;
         char                            rcv[MAXLINE],data[MAXLINE], send[MAXLINE];
         socklen_t                       servaddr_len,cliaddr_len;
         fd_set                          rset,allset;
@@ -771,7 +799,7 @@ int main(int argc, char **argv) {
 
                         cliaddr_len = sizeof(cliaddr);
 
-//                        connsd=Accept(listensd, (struct sockaddr *) &*cliaddr, (socklen_t *)&clilen);
+//                      connsd=Accept(listensd, (struct sockaddr *) &*cliaddr, (socklen_t *)&clilen);
                         connsd=Accept(listensd, (struct sockaddr *) &cliaddr, (socklen_t *)&clilen);
                         Getsockname(listensd,(struct sockaddr *)&servaddr,&servaddr_len);
                         Getpeername(connsd,(struct sockaddr *)&cliaddr,&cliaddr_len);
@@ -789,11 +817,11 @@ int main(int argc, char **argv) {
                                         p.nome_cameriere = i;
                                         p.protocollo=1;
                                         memcpy(send,&p,sizeof(pacchetto));
-                                        Write(connsd,send,sizeof(send));
+                                        Write(client[i],send,sizeof(send));
                                         printf("STRUTTURA CLIENT CONNESSIONE ACCETTATA\n");
                                         camerieri++;
-                                        for (k=1; k<10; k++){
-                                               	printf ("client[%d]=%d\n", k, client[k]);
+                                        for (q=1; q<10; q++){
+                                               	printf ("client[%d]=%d\n", q, client[q]);
                                         }
                                         break;
                                 }
@@ -826,8 +854,8 @@ int main(int argc, char **argv) {
                                         client[i] = -1;
                                         FD_CLR(connsd, &allset);
                                         printf("STRUTTURA CLIENT CONNESSIONE CADUTA\n");
-                                        for (k=1; k<10; k++){
-                                               	printf ("client[%d]=%d\n", k, client[k]);
+                                        for (q=1; q<10; q++){
+                                               	printf ("client[%d]=%d\n", q, client[q]);
                                         }
                                 } else {
                                         memcpy(&p,rcv,sizeof(pacchetto));

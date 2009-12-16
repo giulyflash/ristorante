@@ -20,7 +20,7 @@ typedef struct pacchetto{
 	int error;
 	int flag;
 	int conto;
-	int ttl;
+	int id_piatto_pronto;
 	double tempi[2];
 	struct pacchetto *next;
 }pacchetto;
