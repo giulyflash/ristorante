@@ -100,6 +100,8 @@ void gestisci_protocollo_client(pacchetto p) {
         		menu_cameriere();
         	} else {
 				printf("\n *** il conto e' di %d euro ***\n", p.conto);
+        		if ( gettimeofday(&endtime,NULL) < 0 )
+        				err_sys("gettime error");
 				menu_cameriere();
         	}
                 break;

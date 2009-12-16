@@ -15,7 +15,6 @@ Write(int fd, void *ptr, size_t nbytes) {
 	}
 	if( n < 0){
 		perror("cameriere disperso\n");
-	//	printf("cameriere disperso\n");
 	}
 	return(n);
 }
