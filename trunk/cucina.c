@@ -128,7 +128,6 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 	p.pronti=i;
 	int q;
     while(j!=0) {
-//            if(piatti_pronti[i]!=0) {
     	if(piatti_pronti[cameriere]!=0) {
                     tmp.protocollo = 12;
                     tmp.pronti=i;
@@ -137,7 +136,7 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
                     printf("fd dentro servi_piatto %d\n", client[cameriere]);
                     Write(client[cameriere], send, sizeof(send));
                     printf("cameriere %d devi servire il piatto %d al tavolo %d\n", cameriere, i, p.tavolo);
-                    printf("STRUTTURA CLIENT CONNESSIONE CADUTA DENTRO FORK\n");
+                    printf("STRUTTURA CLIENT DENTRO FORK\n");
                     for (q=1; q<10; q++){
                          	printf ("client[%d]=%d\n", q, client[q]);
                     }
@@ -146,7 +145,6 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
             }
             j--;
     }
-   // if(piatti_pronti[i]==0) {
    	if(piatti_pronti[cameriere]!=0) {
             printf("piatto servito\n");
     }
@@ -210,12 +208,6 @@ void prepara_piatti(pacchetto p) {
     if(p.modificato==0) {
     	if ((pid = fork()) == 0) {
     		Close(listensd);
-    		/*
-    		Signal(SIGCHLD, handler);
-    		Signal(SIGINT, handler);
-    		Signal(SIGPIPE, SIG_IGN);
-    		sleep(15);
-    		*/
     		sleep(30);
     		Signal(SIGPIPE, SIG_IGN);
 			while(lista_camerieri[p.nome_cameriere]->ordine[i] != '\0') {
@@ -551,9 +543,7 @@ void modifica_ordine_server(pacchetto p) {
 
 /*gestione dell'evasione ordine*/
 void evadi_ordine(pacchetto p) {
-	printf("sono arrivato cameriere %d\n", p.nome_cameriere);
 	piatti_pronti[p.nome_cameriere]='\0';
-	printf("ho messo lo zero\n");
 }
 
 /*gestione stampa delle statistiche della cucina*/
@@ -659,7 +649,6 @@ void gestisci_protocollo_server(pacchetto p, int cameriere) {
 				gestisci_sollecito(p);
                 break;
         case 7:
-				printf("sono dentro memorizza info\n");
                 memorizza_info(p);
                 break;
         /*richiama la cancellazione di un ordine*/
@@ -793,7 +782,7 @@ int main(int argc, char **argv) {
 
 
         init_dispensa();
-        Signal(SIGINT, handler);
+//        Signal(SIGINT, handler);
     	Signal(SIGPIPE, SIG_IGN);
 
 
