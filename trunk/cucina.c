@@ -128,7 +128,8 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 	p.pronti=i;
 	int q;
     while(j!=0) {
-            if(piatti_pronti[i]!=0) {
+//            if(piatti_pronti[i]!=0) {
+    	if(piatti_pronti[cameriere]!=0) {
                     tmp.protocollo = 12;
                     tmp.pronti=i;
                     tmp.tavolo=p.tavolo;
@@ -145,7 +146,8 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
             }
             j--;
     }
-    if(piatti_pronti[i]==0) {
+   // if(piatti_pronti[i]==0) {
+   	if(piatti_pronti[cameriere]!=0) {
             printf("piatto servito\n");
     }
 
@@ -155,13 +157,18 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
 		memcpy(send, &tmp, sizeof(pacchetto));
 		Write(client[cameriere], send, sizeof(send));
 		if(cameriere<2) {
+			piatti_pronti[p.nome_cameriere]='\0';
 			lista_camerieri[cameriere+1] = lista_camerieri[cameriere];
+			piatti_pronti[p.nome_cameriere+1]=1;
 			cameriere = cameriere+1;
 			servi_piatto(*tmp2, cameriere, i,tot);
 
+
 		} else {
+			lista_camerieri[1] = lista_camerieri[cameriere];
 			cameriere=1;
-			servi_piatto(*tmp2,cameriere,i,tot);
+			piatti_pronti[1]=1;
+			servi_piatto(*tmp2,1,i,tot);
 		}
 	} else {
 		printf("ottimo lavoro\n");
@@ -426,15 +433,8 @@ void prepara_piatti(pacchetto p) {
 						time=time/lista_camerieri[p.nome_cameriere]->sollecito;
 						sleep(time);
 						printf("piatto pronto, comincio a notificarlo al cameriere\n");
-						/**/
-                //        piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
-				//		piatti_pronti[p.nome_cameriere]=1;
-				//		piatti_pronti[lista_camerieri[p.nome_cameriere]->id_piatto_pronto]=1;
-                //        lista_camerieri[p.nome_cameriere]->id_piatto_pronto=1;
-//						piatti_pronti[p.nome_cameriere]=1;
-						piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
-
-						printf("******* %d *******\n", piatti_pronti[lista_camerieri[p.nome_cameriere]->id_piatto_pronto]);
+					//	piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
+						piatti_pronti[p.nome_cameriere] = 1;
                         servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
 
 					}
@@ -525,12 +525,8 @@ void modifica_ordine_server(pacchetto p) {
 
 /*gestione dell'evasione ordine*/
 void evadi_ordine(pacchetto p) {
-//	memorizza_info(p);
 	printf("sono arrivato cameriere %d\n", p.nome_cameriere);
-	piatti_pronti[p.esauriti]='\0';
-//	lista_camerieri[p.nome_cameriere]->id_piatto_pronto='\0';
-//	lista_camerieri[p.nome_cameriere]->id_piatto_pronto='\0';
-//	lista_camerieri[p.nome_cameriere]->id_piatto_pronto='\0';
+	piatti_pronti[p.nome_cameriere]='\0';
 	printf("ho messo lo zero\n");
 }
 

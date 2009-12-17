@@ -91,6 +91,10 @@ void gestisci_protocollo_client(pacchetto p) {
         /*segnalazione eccessivo ritardo del cameriere*/
         case 14:
                 printf("\n *** non hai servito il tuo tavolo, la cucina ha passato l'ordine a un altro cameriere ***\n");
+				cont=0;
+				printf("cont quando non servo il tavolo %d\n", cont);
+        		if ( gettimeofday(&endtime,NULL) < 0 )
+        				err_sys("gettime error");
                 menu_cameriere();
                 break;
         /*gestione stampa del conto, controllo se il valore relativo al conto della nostra struttura e' stato modificato [ordine evaso] oppure no*/
@@ -100,8 +104,6 @@ void gestisci_protocollo_client(pacchetto p) {
         		menu_cameriere();
         	} else {
 				printf("\n *** il conto e' di %d euro ***\n", p.conto);
-        		if ( gettimeofday(&endtime,NULL) < 0 )
-        				err_sys("gettime error");
 				menu_cameriere();
         	}
                 break;
