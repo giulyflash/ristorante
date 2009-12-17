@@ -338,15 +338,13 @@ void modifica_ordine_client(pacchetto p) {
 	case 2:
 		p.modificato = 2;
 		count = 0, i = 0;
-		printf("%d\n",count);
 			printf("quale piatto vuoi eliminare\n");
 			scanf("%d", &piatto);
 			while (p.ordine[i] != '\0') {
 				if (p.ordine[i] == piatto) {
-					printf("trovato\n");
+					printf("piatto eliminato\n");
 						p.ordine[i] = piatto;
 						p.ordine[i + 1] = 0;
-						printf("p.ordine[i + 1] = %d\n", p.ordine[i + 1]);
 						i += 2;
 				}
 				i += 2;
@@ -440,7 +438,7 @@ void richiedi_conto() {
 	scanf("%d", &p.tavolo);
 	getchar();
 	if(p.tavolo==tavolo_backup) {
-		printf("inviato\n");
+		printf("richiesta inviata\n");
 		p.nome_cameriere=me;
 		my_send(10,p);
 	} else
