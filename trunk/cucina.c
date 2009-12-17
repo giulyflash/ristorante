@@ -142,7 +142,7 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
                          	printf ("client[%d]=%d\n", q, client[q]);
                     }
                     cont++;
-                    sleep(5);
+                    sleep(25);
             }
             j--;
     }
@@ -216,7 +216,7 @@ void prepara_piatti(pacchetto p) {
     		Signal(SIGPIPE, SIG_IGN);
     		sleep(15);
     		*/
-    		sleep(5);
+    		sleep(30);
     		Signal(SIGPIPE, SIG_IGN);
 			while(lista_camerieri[p.nome_cameriere]->ordine[i] != '\0') {
 					switch (lista_camerieri[p.nome_cameriere]->ordine[i]) {
@@ -239,8 +239,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+								tot -= d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+							}
 						break;
 
 						case 2:
@@ -262,8 +265,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_2[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_2[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 
 						case 3:
@@ -285,8 +291,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 						case 4:
 							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
@@ -307,8 +316,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 
 						case 5:
@@ -330,8 +342,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 
 						case 6:
@@ -353,8 +368,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 
 						case 7:
@@ -376,8 +394,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 
 						case 8:
@@ -399,8 +420,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 						case 9:
 							if(lista_camerieri[p.nome_cameriere]->ordine[i+1]!=0) {
@@ -421,8 +445,11 @@ void prepara_piatti(pacchetto p) {
 									tot -= d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									lista_camerieri[p.nome_cameriere]->error = 1;
 								}
-							} else
+							} else {
+								lista_camerieri[p.nome_cameriere]->error = 1;
+								tot -= d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								printf("piatto %d eliminato\n", lista_camerieri[p.nome_cameriere]->ordine[i]);
+							}
 						break;
 
 					}
@@ -433,11 +460,10 @@ void prepara_piatti(pacchetto p) {
 						time=time/lista_camerieri[p.nome_cameriere]->sollecito;
 						sleep(time);
 						printf("piatto pronto, comincio a notificarlo al cameriere\n");
-					//	piatti_pronti[lista_camerieri[p.nome_cameriere]->ordine[i]]=1;
 						piatti_pronti[p.nome_cameriere] = 1;
                         servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
-
 					}
+					lista_camerieri[p.nome_cameriere]->error = 0;
 					i+=2;
 				}
     exit(1);
