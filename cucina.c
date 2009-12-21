@@ -477,10 +477,10 @@ void leggi_ordine(pacchetto p, int i) {
 
 	tmp2 = head;
 
-	if ((p.modificato == 3)) {
+	/*if ((p.modificato == 3)) {
 		prepara_piatti(p);
 		printf("si\n");
-	} else {
+	} else {*/
 
 	while ((tmp2 != NULL) && (trovato == 0)) {
 		if ((tmp2->tavolo == p.tavolo)&& (p.modificato!=1)) {
@@ -503,7 +503,7 @@ void leggi_ordine(pacchetto p, int i) {
 		prepara_piatti(p);
 	}
 
-	}
+	//}
 }
 
 
