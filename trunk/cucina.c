@@ -149,34 +149,32 @@ void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
             printf("piatto servito\n");
     }
 
-	if(cont>2) {
-		printf("Il cameriere non ha servito i piatti nel tempo prestabilito [inviate 3 notifiche], passo l'ordine a un altro cameriere\n");
-		tmp.protocollo = 14;
-		memcpy(send, &tmp, sizeof(pacchetto));
-		Write(client[cameriere], send, sizeof(send));
-		if(cameriere<2) {
-			piatti_pronti[p.nome_cameriere]='\0';
-			lista_camerieri[cameriere+1] = lista_camerieri[cameriere];
-			piatti_pronti[p.nome_cameriere+1]=1;
-			cameriere = cameriere+1;
-			servi_piatto(*tmp2, cameriere, i,tot);
-
-
-		} else {
-			lista_camerieri[1] = lista_camerieri[cameriere];
-			cameriere=1;
-			piatti_pronti[1]=1;
-			servi_piatto(*tmp2,1,i,tot);
-		}
-	} else {
-		printf("ottimo lavoro\n");
-		*incasso += tot;
-		lista_camerieri[cameriere]->conto+=tot;
-		tmp.protocollo = 13;
-		memcpy(send, &tmp, sizeof(pacchetto));
-		printf("fd dentro servi_piatto %d\n", client[cameriere]);
-		Write(client[cameriere], send, sizeof(send));
-	}
+    if(cont>2) {
+            printf("Il cameriere non ha servito i piatti nel tempo prestabilito [inviate 3 notifiche], passo l'ordine a un altro cameriere\n");
+            tmp.protocollo = 14;
+            memcpy(send, &tmp, sizeof(pacchetto));
+            Write(client[cameriere], send, sizeof(send));
+            if(cameriere<3) {
+					cameriere+=1;
+                    piatti_pronti[p.nome_cameriere]='\0';
+                    lista_camerieri[cameriere] = lista_camerieri[p.nome_cameriere];
+                    piatti_pronti[cameriere]=1;
+                    servi_piatto(*tmp2, cameriere, i,tot);
+            } else {
+                    lista_camerieri[1] = lista_camerieri[cameriere];
+                    cameriere=1;
+                    piatti_pronti[1]=1;
+                    servi_piatto(*tmp2,1,i,tot);
+            }
+    } else {
+            printf("ottimo lavoro\n");
+            *incasso += tot;
+            lista_camerieri[cameriere]->conto+=tot;
+            tmp.protocollo = 13;
+            memcpy(send, &tmp, sizeof(pacchetto));
+            printf("fd dentro servi_piatto %d\n", client[cameriere]);
+            Write(client[cameriere], send, sizeof(send));
+    }
 
 }
 
