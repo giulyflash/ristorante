@@ -39,11 +39,14 @@ void gestisci_protocollo_client(pacchetto p) {
         /*gestione modifica ordine*/
         case 6:
                 modifica_ordine_client(p);
-        /*notifica di piatto in preparazione*/        break;
+                break;
+        /*notifica di piatto in preparazione*/
+                /*
         case 7:
                 printf("\n *** la cucina sta preparando il piatto %s per il tavolo %d ***\n",p.messaggio, p.tavolo);
                 menu_cameriere();
                 break;
+                */
         /*segnalazione di ordine gia' presente*/
         case 8:
                 printf("\n *** l' ordine per questo tavolo e' gia stato memorizato ***\n") ;
@@ -92,7 +95,6 @@ void gestisci_protocollo_client(pacchetto p) {
         case 14:
                 printf("\n *** non hai servito il tuo tavolo, la cucina ha passato l'ordine a un altro cameriere ***\n");
 				cont=0;
-				printf("cont quando non servo il tavolo %d\n", cont);
         		if ( gettimeofday(&endtime,NULL) < 0 )
         				err_sys("gettime error");
                 menu_cameriere();
@@ -278,11 +280,14 @@ pacchetto scegli_piatti(pacchetto tmp) {
 void modifica_ordine_client(pacchetto p) {
 
 	int control = 0;
-	int i = 0, piatto = 0, porzioni = 0, count;
+	int i = 0, piatto = 0, porzioni = 0, count, tav=p.tavolo,nome=p.nome_cameriere;
 	int operazione;
 	char c[1];
 	stampa_ordine(p);
-
+	memset(&p,'\0',sizeof(pacchetto));
+	p.tavolo=tav;
+	p.nome_cameriere=nome;
+	p.sollecito=1;
 	printf("\n1. aggiungi piatto\n");
 	printf("2. cancella piatto\n");
 	printf("3. torna al menu principale\n");
@@ -291,7 +296,7 @@ void modifica_ordine_client(pacchetto p) {
 	switch (operazione) {
 	/*aggiunta piatto*/
 	case 1:
-		p.modificato = 1;
+		p.modificato = 2;
 		count = 0, i = 0;
 		while (p.ordine[i] != '\0') {
 			count++;
@@ -366,6 +371,7 @@ void modifica_ordine_client(pacchetto p) {
 		p.modificato=0;
 	}
 	my_send(2, p);
+	menu_cameriere();
 }
 
 /*terminazione client*/
