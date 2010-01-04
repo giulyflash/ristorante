@@ -10,7 +10,6 @@
 
 int numero_ordine=0, camerieri, max, *sollecito, *incasso, *client, k=0,listensd;
 double  *tempo_medio, *tempo_di_servizio, *tempo_totale, tempo_tot,*info;
-//struct sockaddr_in *cliaddr;
 
 pacchetto *lista_camerieri[4];
 int shmid_t;
@@ -121,12 +120,11 @@ void lista_piatti_attesa(pacchetto p) {
  * e viene incrementato l'incasso di giornata
 */
 void servi_piatto(pacchetto p, int cameriere, int i, int tot) {
-	int j=3, cont=0;
+	int j=3, cont=0, q;
 	pacchetto tmp, *tmp2;
 	char send[sizeof(pacchetto)];
 	tmp2 = &p;
 	p.pronti=i;
-	int q;
     while(j!=0) {
     	if(piatti_pronti[cameriere]!=0) {
                     tmp.protocollo = 12;
@@ -208,7 +206,7 @@ void prepara_piatti(pacchetto p) {
     	if ((pid = fork()) == 0) {
     		Close(listensd);
     		sleep(30);
-    		Signal(SIGPIPE, SIG_IGN);
+/*    		Signal(SIGPIPE, SIG_IGN); */
 			while(lista_camerieri[p.nome_cameriere]->ordine[i] != '\0') {
 					switch (lista_camerieri[p.nome_cameriere]->ordine[i]) {
 						case 1:
@@ -496,8 +494,6 @@ void leggi_ordine(pacchetto p, int i) {
 		stampa_lista(head);
 		prepara_piatti(p);
 	}
-
-	//}
 }
 
 
@@ -670,7 +666,7 @@ void gestisci_protocollo_server(pacchetto p, int cameriere) {
  *  piatti_pronti		zona condivisa per la lista dei piatti pronti in attesa
  */
 void shared() {
-	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6, shmid7,shmid8;
+	int                             shmid1, shmid2,shmid3,shmid4,shmid5,shmid6, shmid8;
 
     if((shmid1 = (shmget(IPC_PRIVATE, sizeof(int), 0777))) < 0) {
             err_sys("errore nell shmget");
@@ -776,8 +772,8 @@ int main(int argc, char **argv) {
 
 
         init_dispensa();
-//        Signal(SIGINT, handler);
-    	Signal(SIGPIPE, SIG_IGN);
+
+    	signal(SIGPIPE, SIG_IGN);
 
 
         for(;;) {
@@ -804,7 +800,7 @@ int main(int argc, char **argv) {
 
                         cliaddr_len = sizeof(cliaddr);
 
-//                      connsd=Accept(listensd, (struct sockaddr *) &*cliaddr, (socklen_t *)&clilen);
+						/*connsd=Accept(listensd, (struct sockaddr *) &*cliaddr, (socklen_t *)&clilen);*/
                         connsd=Accept(listensd, (struct sockaddr *) &cliaddr, (socklen_t *)&clilen);
                         Getsockname(listensd,(struct sockaddr *)&servaddr,&servaddr_len);
                         Getpeername(connsd,(struct sockaddr *)&cliaddr,&cliaddr_len);

@@ -496,7 +496,7 @@ int main(int argc, char **argv) {
         printf("\nclient locale --> *** indirizzo IP: %s PORTA: %d ***\n",inet_ntop(AF_INET,&localaddr.sin_addr,buff,sizeof(buff)),ntohs(localaddr.sin_port));
         printf("server remoto --> *** indirizzo IP: %s PORTA: %d ***\n",inet_ntop(AF_INET,&peeraddr.sin_addr,buff,sizeof(buff)),ntohs(peeraddr.sin_port));
 
-        Signal(SIGPIPE, SIG_IGN);
+        signal(SIGPIPE, SIG_IGN);
 
         maxd = (MAX(0,sockfd))+1;
         timeout.tv_sec = 6000;
