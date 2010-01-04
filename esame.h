@@ -13,14 +13,11 @@ typedef struct pacchetto{
 	int ordine[50];
 	int pronti;
 	int esauriti;
-	char messaggio[20];
 	int modificato;
 	int servito;
 	int sollecito;
 	int error;
-	int flag;
 	int conto;
-	int id_piatto_pronto;
 	double tempi[2];
 	struct pacchetto *next;
 }pacchetto;

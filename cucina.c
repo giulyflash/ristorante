@@ -196,6 +196,7 @@ void prepara_piatti(pacchetto p) {
 	pid_t pid;
 	int shmid[10];
 	char send[sizeof(pacchetto)];
+
     if(p.modificato==0) {
         if((shmid[p.tavolo] = (shmget(IPC_PRIVATE, sizeof(pacchetto), 0600))) < 0) {
                 err_sys("errore nell shmget");
@@ -204,8 +205,8 @@ void prepara_piatti(pacchetto p) {
         *lista_camerieri[p.nome_cameriere] = p;
     }
     *lista_camerieri[p.nome_cameriere] = p;
+    if((p.modificato==0)||(p.modificato==2)) {
 
-    if(p.modificato==0) {
     	if ((pid = fork()) == 0) {
     		Close(listensd);
     		sleep(30);
@@ -445,7 +446,6 @@ void prepara_piatti(pacchetto p) {
 						break;
 
 					}
-
 					if(lista_camerieri[p.nome_cameriere]->error!=1) {
 						time = ((lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1]));
 						printf("cucino il piatto in %d secondi. . .\n",(time)/lista_camerieri[p.nome_cameriere]->sollecito);
@@ -454,9 +454,10 @@ void prepara_piatti(pacchetto p) {
 						printf("piatto pronto, comincio a notificarlo al cameriere\n");
 						piatti_pronti[p.nome_cameriere] = 1;
                         servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
-					}
-					lista_camerieri[p.nome_cameriere]->error = 0;
+					} else {exit(1);}
+                    lista_camerieri[p.nome_cameriere]->error = 0;
 					i+=2;
+
 				}
     exit(1);
     }
@@ -476,11 +477,6 @@ void leggi_ordine(pacchetto p, int i) {
 	memcpy(tmp, &p, sizeof(p));
 
 	tmp2 = head;
-
-	/*if ((p.modificato == 3)) {
-		prepara_piatti(p);
-		printf("si\n");
-	} else {*/
 
 	while ((tmp2 != NULL) && (trovato == 0)) {
 		if ((tmp2->tavolo == p.tavolo)&& (p.modificato!=1)) {
@@ -653,7 +649,7 @@ void gestisci_protocollo_server(pacchetto p, int cameriere) {
                 break;
         /*richiama la cancellazione di un ordine*/
         case 8:
-				printf("ordine per il tavolo %d cancellato\n", p.tavolo);
+				printf("il tavolo %d puo' ora completare l'ordine\n", p.tavolo);
                 head = cancella_pacchetto(p);
                 break;
 		/*richiama la stampa delle statistiche della cucina*/
