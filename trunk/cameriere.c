@@ -114,7 +114,7 @@ void gestisci_protocollo_client(pacchetto p) {
                 printf("sono terminati gli ingredienti per il piatto %d \n", p.esauriti);
                 p.error=1;
                 my_send(8,p);
-                modifica_ordine_client(p);
+                ingredienti_esauriti_exception(p);
                 break;
 
         }
@@ -276,8 +276,102 @@ pacchetto scegli_piatti(pacchetto tmp) {
  *	il numero di protocollo corrispondente.
  */
 
-
 void modifica_ordine_client(pacchetto p) {
+
+        int control = 0;
+        int i = 0, piatto = 0, porzioni = 0, count;
+        int operazione;
+        char c[1];
+        stampa_ordine(p);
+
+        printf("\n1. aggiungi piatto\n");
+        printf("2. cancella piatto\n");
+        printf("3. torna al menu principale\n");
+        printf("\ncosa desideri fare:\n");
+        scanf("%d", &operazione);
+        switch (operazione) {
+        /*aggiunta piatto*/
+        case 1:
+                p.modificato = 1;
+                count = 0, i = 0;
+
+                while (p.ordine[i] != '\0'){
+                        count++;
+                        i+=2;
+                }
+
+                while (c[0] != 'n') {
+                        control = 0;
+                        while (control != 1) {
+                                printf("cosa desidera\n");
+                                scanf("%d", &piatto);
+                                getchar();
+                                if ((piatto > 9) || (piatto <= 0)) {
+                                        printf("\nerrore: il menu ha solo 10 piatti [1-10]\n");
+                                        control = 0;
+                                } else {
+                                        control = 1;
+                                        p.ordine[i] = piatto;
+                                }
+                        }
+                        control = 0;
+
+                        while (control != 1) {
+                                printf("quante porzioni [devi ordinare almeno una porzione]\n");
+                                scanf("%d", &porzioni);
+                                getchar();
+                                if (porzioni == 0) {
+                                        printf("errore: devi ordinare almeno una porzione di ogni piatto\n");
+                                        control = 0;
+
+                                } else {
+                                        control = 1;
+                                        p.ordine[i + 1] = porzioni;
+                                        i += 2;
+                                        count+=2;
+                                }
+                        }
+                        printf("altro? s/n \n");
+                        read(0, &c[0], sizeof(char));
+
+                }
+                p.esauriti = count;
+                break;
+        /*cancellazione piatto*/
+        case 2:
+                p.modificato = 1;
+                count = 0, i = 0;
+                        printf("quale piatto vuoi eliminare\n");
+                        scanf("%d", &piatto);
+                        while (p.ordine[i] != '\0') {
+                                if (p.ordine[i] == piatto) {
+                                        printf("piatto eliminato\n");
+                                                p.ordine[i] = piatto;
+                                                p.ordine[i + 1] = 0;
+                                                i += 2;
+                                }
+                                i += 2;
+                        }
+                p.esauriti=count;
+                break;
+        /*ritorno al menu*/
+        case 3:
+                menu_cameriere();
+                break;
+        /*segnalazione di scelta non valida*/
+        default:
+                printf("\nhai fatto una scelta non valida\n");
+                menu_cameriere();
+                break;
+        }
+        if(p.error==1) {
+                p.ordine[1]=0;
+                p.modificato=0;
+        }
+        my_send(2, p);
+}
+
+void ingredienti_esauriti_exception(pacchetto p) {
 
 	int control = 0;
 	int i = 0, piatto = 0, porzioni = 0, count, tav=p.tavolo,nome=p.nome_cameriere;

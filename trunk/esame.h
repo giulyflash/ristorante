@@ -51,6 +51,7 @@ void gestisci_input(char *input_cameriere);
 void nuovo_ordine();
 pacchetto scegli_piatti(pacchetto tmp);
 void modifica_ordine_client(pacchetto p);
+void ingredienti_esauriti_exception(pacchetto p);
 void servi(pacchetto p);
 void invia_sollecito();
 void richiedi_conto();
