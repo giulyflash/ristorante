@@ -214,7 +214,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_1[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_1[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -225,7 +225,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_1[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_1[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -250,7 +250,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_2[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_2[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -264,7 +264,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_3[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_3[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -275,7 +275,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_3[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_3[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -288,7 +288,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_4[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_4[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -299,7 +299,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_4[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_4[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -313,7 +313,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_5[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_5[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -324,7 +324,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_5[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_5[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -338,7 +338,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_6[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_6[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -349,7 +349,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_6[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_6[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -363,7 +363,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_7[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_7[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -374,7 +374,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_7[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_7[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -388,7 +388,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_8[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_8[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -399,7 +399,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_8[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_8[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -412,7 +412,7 @@ void prepara_piatti(pacchetto p) {
 								if ((d->piatto_9[0] -= lista_camerieri[p.nome_cameriere]->ordine[i+1]) > 0) {
 									lista_camerieri[p.nome_cameriere]->error=0;
 									printf("piatto %d in lavorazione. . .In dispensa sono presenti %d porzioni del piatto %d\n", lista_camerieri[p.nome_cameriere]->ordine[i],d->piatto_9[0], lista_camerieri[p.nome_cameriere]->ordine[i]);
-									tot += d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
+									tot = d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
 								} else {
 									p.esauriti=lista_camerieri[p.nome_cameriere]->ordine[i];
 									p.protocollo=20;
@@ -423,7 +423,7 @@ void prepara_piatti(pacchetto p) {
 									lista_camerieri[p.nome_cameriere]->ordine[i]=0;
 									d->piatto_9[0] += lista_camerieri[p.nome_cameriere]->ordine[i+1];
 									tot -= d->piatto_9[1] * lista_camerieri[p.nome_cameriere]->ordine[i+1];
-									lista_camerieri[p.nome_cameriere]->error = 1;
+									lista_camerieri[p.nome_cameriere]->error = 2;
 								}
 							} else {
 								lista_camerieri[p.nome_cameriere]->error = 1;
@@ -434,6 +434,8 @@ void prepara_piatti(pacchetto p) {
 
 					}
 					if(lista_camerieri[p.nome_cameriere]->error!=1) {
+						if(lista_camerieri[p.nome_cameriere]->error==2)
+							exit(1);
 						time = ((lista_camerieri[p.nome_cameriere]->ordine[i]*lista_camerieri[p.nome_cameriere]->ordine[i+1]));
 						printf("cucino il piatto in %d secondi. . .\n",(time)/lista_camerieri[p.nome_cameriere]->sollecito);
 						time=time/lista_camerieri[p.nome_cameriere]->sollecito;
@@ -441,7 +443,7 @@ void prepara_piatti(pacchetto p) {
 						printf("piatto pronto, comincio a notificarlo al cameriere\n");
 						piatti_pronti[p.nome_cameriere] = 1;
                         servi_piatto(p,p.nome_cameriere,lista_camerieri[p.nome_cameriere]->ordine[i], tot);
-					} else {exit(1);}
+					}
                     lista_camerieri[p.nome_cameriere]->error = 0;
 					i+=2;
 
